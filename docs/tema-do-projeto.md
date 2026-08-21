@@ -41,3 +41,7 @@ Projeto tematico desenvolvido a partir do repositorio de referencia [`suporteos2
 | Pratos Principais | `PRD-0002` | Risoto de Cogumelos | 8 | 48,50 |
 | Bebidas | `PRD-0003` | Suco Natural | 30 | 9,00 |
 | Sobremesas | `PRD-0004` | Petit Gateau | 10 | 19,90 |
+
+## Estado atual do projeto
+
+O repositorio esta no ponto de quebra da **Aula 03**: `CategoriaProduto` e `Produto` implementados em Java puro, sem Spring nem JPA, com as invariantes de negocio (codigo/descricao obrigatorios, saldo e valor nao negativos, movimentacao de estoque validada, associacao bidirecional consistente, codigo unico por categoria) protegidas pelo proprio construtor e cobertas por testes unitarios.
