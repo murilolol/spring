@@ -1,6 +1,6 @@
 # Tema do projeto individual
 
-Projeto tematico desenvolvido a partir do repositorio de referencia [`suporteos2026`](https://github.com/jeffersonarpasserini/suporteos2026), seguindo a estrutura pedida a partir da Aula 02.
+Projeto tematico desenvolvido a partir do repositorio de referencia [`suporteos2026`](https://github.com/jeffersonarpasserini/suporteos2026), seguindo a estrutura pedida nas Aulas 00 a 04.
 
 ## Identificacao
 
@@ -44,4 +44,10 @@ Projeto tematico desenvolvido a partir do repositorio de referencia [`suporteos2
 
 ## Estado atual do projeto
 
-O repositorio esta no ponto de quebra da **Aula 03**: `CategoriaProduto` e `Produto` implementados em Java puro, sem Spring nem JPA, com as invariantes de negocio (codigo/descricao obrigatorios, saldo e valor nao negativos, movimentacao de estoque validada, associacao bidirecional consistente, codigo unico por categoria) protegidas pelo proprio construtor e cobertas por testes unitarios.
+O repositorio esta no ponto de quebra da **Aula 04**:
+
+- `CategoriaProduto` e `Produto` implementados em Java puro (Aula 03), com regras de negocio (calculo de valor em estoque, entrada/saida de estoque, associacao bidirecional, validacoes) cobertas por testes unitarios.
+- Persistencia com Spring Data JPA, PostgreSQL e Liquibase (Aula 04): o Liquibase cria e versiona o esquema (`categoria_produto`, `produto`), o Hibernate apenas valida o mapeamento (`ddl-auto=validate`).
+- Profiles `dev` e `test` configurados via `.env` local, sem H2 e sem valores fixos no codigo-fonte.
+
+O que ainda nao existe: controllers REST para `CategoriaProduto`/`Produto` (nao fazem parte das Aulas 00-04) e o modulo de pedidos propriamente dito, que depende de aulas futuras do curso.
