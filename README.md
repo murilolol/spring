@@ -17,3 +17,7 @@ API didatica desenvolvida na disciplina de Desenvolvimento de Sistemas do curso 
 ## Organizacao do curso
 
 O sistema sera construido incrementalmente. Cada aula termina em um estado executavel, registrado por um commit e, apos validacao, por uma tag Git no formato `aula-NN-*`.
+
+## Ambiente (Aula 01)
+
+Ambiente validado: Java 21 (Eclipse Temurin) e Maven Wrapper, confirmados por `java -version`, `javac -version` e `.\mvnw.cmd -version`. O Maven Wrapper fixa a versao do Maven usada pelo projeto, dispensando instalacao global.
