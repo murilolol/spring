@@ -1,0 +1,109 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-01-create-item-pedido
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de itens de pedido, com snapshot do preco no momento do lancamento.
+      changes:
+        - createTable:
+            tableName: item_pedido
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_item_pedido
+                    nullable: false
+              - column:
+                  name: pedido_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: item_cardapio_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantidade
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: preco_unitario
+                  type: NUMERIC(18,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observacao
+                  type: VARCHAR(200)
+      rollback:
+        - dropTable:
+            tableName: item_pedido
+
+  - changeSet:
+      id: 011-02-foreign-key-item-pedido-pedido
+      author: extensao-restaurante-2026
+      comment: Liga o item de pedido ao pedido, em cascata pois faz parte do mesmo agregado.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: item_pedido
+            baseColumnNames: pedido_id
+            referencedTableName: pedido
+            referencedColumnNames: id
+            constraintName: fk_item_pedido_pedido
+            onDelete: CASCADE
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: item_pedido
+            constraintName: fk_item_pedido_pedido
+
+  - changeSet:
+      id: 011-03-foreign-key-item-pedido-item-cardapio
+      author: extensao-restaurante-2026
+      comment: Liga o item de pedido ao item de cardapio de origem.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: item_pedido
+            baseColumnNames: item_cardapio_id
+            referencedTableName: item_cardapio
+            referencedColumnNames: id
+            constraintName: fk_item_pedido_item_cardapio
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: item_pedido
+            constraintName: fk_item_pedido_item_cardapio
+
+  - changeSet:
+      id: 011-04-check-item-pedido-quantidade
+      author: extensao-restaurante-2026
+      comment: Impede quantidade menor ou igual a zero inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_pedido
+              ADD CONSTRAINT ck_item_pedido_quantidade
+              CHECK (quantidade > 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_pedido
+              DROP CONSTRAINT ck_item_pedido_quantidade
+
+  - changeSet:
+      id: 011-05-check-item-pedido-preco-unitario
+      author: extensao-restaurante-2026
+      comment: Impede preco unitario negativo inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_pedido
+              ADD CONSTRAINT ck_item_pedido_preco_unitario
+              CHECK (preco_unitario >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_pedido
+              DROP CONSTRAINT ck_item_pedido_preco_unitario

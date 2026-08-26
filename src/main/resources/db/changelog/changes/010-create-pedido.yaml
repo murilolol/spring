@@ -1,0 +1,130 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-01-create-pedido
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de pedidos vinculados a uma comanda.
+      changes:
+        - createTable:
+            tableName: pedido
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_pedido
+                    nullable: false
+              - column:
+                  name: codigo
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comanda_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: usuario_solicitante_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observacao
+                  type: VARCHAR(300)
+              - column:
+                  name: motivo_cancelamento
+                  type: VARCHAR(200)
+              - column:
+                  name: aberto_em
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enviado_preparo_em
+                  type: TIMESTAMP
+              - column:
+                  name: pronto_em
+                  type: TIMESTAMP
+              - column:
+                  name: entregue_em
+                  type: TIMESTAMP
+              - column:
+                  name: pago_em
+                  type: TIMESTAMP
+              - column:
+                  name: cancelado_em
+                  type: TIMESTAMP
+      rollback:
+        - dropTable:
+            tableName: pedido
+
+  - changeSet:
+      id: 010-02-unique-pedido-codigo
+      author: extensao-restaurante-2026
+      comment: Garante a unicidade global do codigo do pedido.
+      changes:
+        - addUniqueConstraint:
+            tableName: pedido
+            columnNames: codigo
+            constraintName: uk_pedido_codigo
+      rollback:
+        - dropUniqueConstraint:
+            tableName: pedido
+            constraintName: uk_pedido_codigo
+
+  - changeSet:
+      id: 010-03-foreign-key-pedido-comanda
+      author: extensao-restaurante-2026
+      comment: Liga o pedido a comanda que o agrupa.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: pedido
+            baseColumnNames: comanda_id
+            referencedTableName: comanda
+            referencedColumnNames: id
+            constraintName: fk_pedido_comanda
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: pedido
+            constraintName: fk_pedido_comanda
+
+  - changeSet:
+      id: 010-04-foreign-key-pedido-usuario-solicitante
+      author: extensao-restaurante-2026
+      comment: Liga o pedido ao usuario que o lancou.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: pedido
+            baseColumnNames: usuario_solicitante_id
+            referencedTableName: usuario
+            referencedColumnNames: id
+            constraintName: fk_pedido_usuario_solicitante
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: pedido
+            constraintName: fk_pedido_usuario_solicitante
+
+  - changeSet:
+      id: 010-05-check-pedido-status
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE pedido
+              ADD CONSTRAINT ck_pedido_status
+              CHECK (status IN ('ABERTO', 'EM_PREPARO', 'PRONTO', 'ENTREGUE', 'PAGO', 'CANCELADO'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE pedido
+              DROP CONSTRAINT ck_pedido_status

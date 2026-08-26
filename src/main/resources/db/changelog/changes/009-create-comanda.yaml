@@ -1,0 +1,215 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-01-create-comanda
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de comandas, vinculadas a uma mesa ou a um cliente.
+      changes:
+        - createTable:
+            tableName: comanda
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_comanda
+                    nullable: false
+              - column:
+                  name: codigo
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tipo_atendimento
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: mesa_id
+                  type: BIGINT
+              - column:
+                  name: cliente_id
+                  type: BIGINT
+              - column:
+                  name: usuario_responsavel_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: numero_pessoas
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: percentual_taxa_servico
+                  type: NUMERIC(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aberta_em
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fechada_em
+                  type: TIMESTAMP
+              - column:
+                  name: cancelada_em
+                  type: TIMESTAMP
+              - column:
+                  name: observacao
+                  type: VARCHAR(300)
+      rollback:
+        - dropTable:
+            tableName: comanda
+
+  - changeSet:
+      id: 009-02-unique-comanda-codigo
+      author: extensao-restaurante-2026
+      comment: Garante a unicidade global do codigo da comanda.
+      changes:
+        - addUniqueConstraint:
+            tableName: comanda
+            columnNames: codigo
+            constraintName: uk_comanda_codigo
+      rollback:
+        - dropUniqueConstraint:
+            tableName: comanda
+            constraintName: uk_comanda_codigo
+
+  - changeSet:
+      id: 009-03-foreign-key-comanda-mesa
+      author: extensao-restaurante-2026
+      comment: Liga a comanda a mesa quando houver.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: comanda
+            baseColumnNames: mesa_id
+            referencedTableName: mesa
+            referencedColumnNames: id
+            constraintName: fk_comanda_mesa
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: comanda
+            constraintName: fk_comanda_mesa
+
+  - changeSet:
+      id: 009-04-foreign-key-comanda-cliente
+      author: extensao-restaurante-2026
+      comment: Liga a comanda ao cliente quando houver.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: comanda
+            baseColumnNames: cliente_id
+            referencedTableName: cliente
+            referencedColumnNames: id
+            constraintName: fk_comanda_cliente
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: comanda
+            constraintName: fk_comanda_cliente
+
+  - changeSet:
+      id: 009-05-foreign-key-comanda-usuario-responsavel
+      author: extensao-restaurante-2026
+      comment: Liga a comanda ao usuario que a abriu.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: comanda
+            baseColumnNames: usuario_responsavel_id
+            referencedTableName: usuario
+            referencedColumnNames: id
+            constraintName: fk_comanda_usuario_responsavel
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: comanda
+            constraintName: fk_comanda_usuario_responsavel
+
+  - changeSet:
+      id: 009-06-check-comanda-mesa-ou-cliente
+      author: extensao-restaurante-2026
+      comment: Exige que a comanda esteja vinculada a uma mesa ou a um cliente.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              ADD CONSTRAINT ck_comanda_mesa_ou_cliente
+              CHECK (mesa_id IS NOT NULL OR cliente_id IS NOT NULL)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              DROP CONSTRAINT ck_comanda_mesa_ou_cliente
+
+  - changeSet:
+      id: 009-07-check-comanda-tipo-atendimento
+      author: extensao-restaurante-2026
+      comment: Restringe o tipo de atendimento aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              ADD CONSTRAINT ck_comanda_tipo_atendimento
+              CHECK (tipo_atendimento IN ('SALAO', 'BALCAO', 'DELIVERY', 'RETIRADA'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              DROP CONSTRAINT ck_comanda_tipo_atendimento
+
+  - changeSet:
+      id: 009-08-check-comanda-status
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              ADD CONSTRAINT ck_comanda_status
+              CHECK (status IN ('ABERTA', 'FECHADA', 'PAGA', 'CANCELADA'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              DROP CONSTRAINT ck_comanda_status
+
+  - changeSet:
+      id: 009-09-check-comanda-numero-pessoas
+      author: extensao-restaurante-2026
+      comment: Impede numero de pessoas menor ou igual a zero inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              ADD CONSTRAINT ck_comanda_numero_pessoas
+              CHECK (numero_pessoas > 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              DROP CONSTRAINT ck_comanda_numero_pessoas
+
+  - changeSet:
+      id: 009-10-check-comanda-percentual-taxa-servico
+      author: extensao-restaurante-2026
+      comment: Impede percentual de taxa de servico fora do intervalo 0 a 100.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              ADD CONSTRAINT ck_comanda_percentual_taxa_servico
+              CHECK (percentual_taxa_servico >= 0 AND percentual_taxa_servico <= 100)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE comanda
+              DROP CONSTRAINT ck_comanda_percentual_taxa_servico
