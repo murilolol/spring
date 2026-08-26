@@ -1,0 +1,159 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-01-create-pagamento
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de pagamentos que quitam uma comanda.
+      changes:
+        - createTable:
+            tableName: pagamento
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_pagamento
+                    nullable: false
+              - column:
+                  name: comanda_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sessao_caixa_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: forma_pagamento
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: valor
+                  type: NUMERIC(18,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: valor_recebido
+                  type: NUMERIC(18,2)
+              - column:
+                  name: troco
+                  type: NUMERIC(18,2)
+              - column:
+                  name: usuario_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: registrado_em
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: pagamento
+
+  - changeSet:
+      id: 015-02-foreign-key-pagamento-comanda
+      author: extensao-restaurante-2026
+      comment: Liga o pagamento a comanda quitada.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: pagamento
+            baseColumnNames: comanda_id
+            referencedTableName: comanda
+            referencedColumnNames: id
+            constraintName: fk_pagamento_comanda
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: pagamento
+            constraintName: fk_pagamento_comanda
+
+  - changeSet:
+      id: 015-03-foreign-key-pagamento-sessao-caixa
+      author: extensao-restaurante-2026
+      comment: Liga o pagamento a sessao de caixa em que foi registrado.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: pagamento
+            baseColumnNames: sessao_caixa_id
+            referencedTableName: sessao_caixa
+            referencedColumnNames: id
+            constraintName: fk_pagamento_sessao_caixa
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: pagamento
+            constraintName: fk_pagamento_sessao_caixa
+
+  - changeSet:
+      id: 015-04-foreign-key-pagamento-usuario
+      author: extensao-restaurante-2026
+      comment: Liga o pagamento ao usuario que o registrou.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: pagamento
+            baseColumnNames: usuario_id
+            referencedTableName: usuario
+            referencedColumnNames: id
+            constraintName: fk_pagamento_usuario
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: pagamento
+            constraintName: fk_pagamento_usuario
+
+  - changeSet:
+      id: 015-05-check-pagamento-forma
+      author: extensao-restaurante-2026
+      comment: Restringe a forma de pagamento aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE pagamento
+              ADD CONSTRAINT ck_pagamento_forma
+              CHECK (forma_pagamento IN ('DINHEIRO', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'PIX', 'VALE_REFEICAO'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE pagamento
+              DROP CONSTRAINT ck_pagamento_forma
+
+  - changeSet:
+      id: 015-06-check-pagamento-valor
+      author: extensao-restaurante-2026
+      comment: Impede valor de pagamento menor ou igual a zero inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE pagamento
+              ADD CONSTRAINT ck_pagamento_valor
+              CHECK (valor > 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE pagamento
+              DROP CONSTRAINT ck_pagamento_valor
+
+  - changeSet:
+      id: 015-07-check-pagamento-troco-so-dinheiro
+      author: extensao-restaurante-2026
+      comment: Garante que valor recebido e troco so existem para pagamento em dinheiro.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE pagamento
+              ADD CONSTRAINT ck_pagamento_troco_so_dinheiro
+              CHECK (
+                (forma_pagamento = 'DINHEIRO' AND valor_recebido IS NOT NULL AND troco IS NOT NULL)
+                OR
+                (forma_pagamento != 'DINHEIRO' AND valor_recebido IS NULL AND troco IS NULL)
+              )
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE pagamento
+              DROP CONSTRAINT ck_pagamento_troco_so_dinheiro

@@ -1,0 +1,130 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-01-indice-comanda-status
+      author: extensao-restaurante-2026
+      comment: Acelera a listagem de comandas filtradas por status.
+      changes:
+        - createIndex:
+            tableName: comanda
+            indexName: idx_comanda_status
+            columns:
+              - column:
+                  name: status
+      rollback:
+        - dropIndex:
+            tableName: comanda
+            indexName: idx_comanda_status
+
+  - changeSet:
+      id: 016-02-indice-pedido-status
+      author: extensao-restaurante-2026
+      comment: Acelera a listagem de pedidos filtrados por status.
+      changes:
+        - createIndex:
+            tableName: pedido
+            indexName: idx_pedido_status
+            columns:
+              - column:
+                  name: status
+      rollback:
+        - dropIndex:
+            tableName: pedido
+            indexName: idx_pedido_status
+
+  - changeSet:
+      id: 016-03-indice-pedido-comanda
+      author: extensao-restaurante-2026
+      comment: Acelera a busca dos pedidos de uma comanda.
+      changes:
+        - createIndex:
+            tableName: pedido
+            indexName: idx_pedido_comanda_id
+            columns:
+              - column:
+                  name: comanda_id
+      rollback:
+        - dropIndex:
+            tableName: pedido
+            indexName: idx_pedido_comanda_id
+
+  - changeSet:
+      id: 016-04-indice-preparo-item-fila
+      author: extensao-restaurante-2026
+      comment: Acelera a projecao ordenada da fila de preparo por secao e status.
+      changes:
+        - createIndex:
+            tableName: preparo_item
+            indexName: idx_preparo_item_secao_status
+            columns:
+              - column:
+                  name: secao
+              - column:
+                  name: status
+      rollback:
+        - dropIndex:
+            tableName: preparo_item
+            indexName: idx_preparo_item_secao_status
+
+  - changeSet:
+      id: 016-05-indice-item-cardapio-categoria
+      author: extensao-restaurante-2026
+      comment: Acelera a listagem de itens de cardapio por categoria.
+      changes:
+        - createIndex:
+            tableName: item_cardapio
+            indexName: idx_item_cardapio_categoria_cardapio_id
+            columns:
+              - column:
+                  name: categoria_cardapio_id
+      rollback:
+        - dropIndex:
+            tableName: item_cardapio
+            indexName: idx_item_cardapio_categoria_cardapio_id
+
+  - changeSet:
+      id: 016-06-indice-pagamento-comanda
+      author: extensao-restaurante-2026
+      comment: Acelera a busca dos pagamentos de uma comanda.
+      changes:
+        - createIndex:
+            tableName: pagamento
+            indexName: idx_pagamento_comanda_id
+            columns:
+              - column:
+                  name: comanda_id
+      rollback:
+        - dropIndex:
+            tableName: pagamento
+            indexName: idx_pagamento_comanda_id
+
+  - changeSet:
+      id: 016-07-indice-pagamento-sessao-caixa
+      author: extensao-restaurante-2026
+      comment: Acelera a busca dos pagamentos de uma sessao de caixa.
+      changes:
+        - createIndex:
+            tableName: pagamento
+            indexName: idx_pagamento_sessao_caixa_id
+            columns:
+              - column:
+                  name: sessao_caixa_id
+      rollback:
+        - dropIndex:
+            tableName: pagamento
+            indexName: idx_pagamento_sessao_caixa_id
+
+  - changeSet:
+      id: 016-08-indice-comanda-cliente
+      author: extensao-restaurante-2026
+      comment: Acelera a busca do historico de comandas de um cliente.
+      changes:
+        - createIndex:
+            tableName: comanda
+            indexName: idx_comanda_cliente_id
+            columns:
+              - column:
+                  name: cliente_id
+      rollback:
+        - dropIndex:
+            tableName: comanda
+            indexName: idx_comanda_cliente_id

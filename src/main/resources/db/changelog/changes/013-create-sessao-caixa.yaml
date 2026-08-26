@@ -1,0 +1,139 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-01-create-sessao-caixa
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de sessoes (turnos) de caixa.
+      changes:
+        - createTable:
+            tableName: sessao_caixa
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_sessao_caixa
+                    nullable: false
+              - column:
+                  name: usuario_abertura_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: usuario_fechamento_id
+                  type: BIGINT
+              - column:
+                  name: valor_abertura
+                  type: NUMERIC(18,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: valor_informado_fechamento
+                  type: NUMERIC(18,2)
+              - column:
+                  name: valor_apurado_fechamento
+                  type: NUMERIC(18,2)
+              - column:
+                  name: diferenca_fechamento
+                  type: NUMERIC(18,2)
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observacao_fechamento
+                  type: VARCHAR(300)
+              - column:
+                  name: aberta_em
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fechada_em
+                  type: TIMESTAMP
+      rollback:
+        - dropTable:
+            tableName: sessao_caixa
+
+  - changeSet:
+      id: 013-02-foreign-key-sessao-caixa-usuario-abertura
+      author: extensao-restaurante-2026
+      comment: Liga a sessao ao usuario que a abriu.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: sessao_caixa
+            baseColumnNames: usuario_abertura_id
+            referencedTableName: usuario
+            referencedColumnNames: id
+            constraintName: fk_sessao_caixa_usuario_abertura
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: sessao_caixa
+            constraintName: fk_sessao_caixa_usuario_abertura
+
+  - changeSet:
+      id: 013-03-foreign-key-sessao-caixa-usuario-fechamento
+      author: extensao-restaurante-2026
+      comment: Liga a sessao ao usuario que a fechou.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: sessao_caixa
+            baseColumnNames: usuario_fechamento_id
+            referencedTableName: usuario
+            referencedColumnNames: id
+            constraintName: fk_sessao_caixa_usuario_fechamento
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: sessao_caixa
+            constraintName: fk_sessao_caixa_usuario_fechamento
+
+  - changeSet:
+      id: 013-04-check-sessao-caixa-status
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE sessao_caixa
+              ADD CONSTRAINT ck_sessao_caixa_status
+              CHECK (status IN ('ABERTA', 'FECHADA'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE sessao_caixa
+              DROP CONSTRAINT ck_sessao_caixa_status
+
+  - changeSet:
+      id: 013-05-check-sessao-caixa-valor-abertura
+      author: extensao-restaurante-2026
+      comment: Impede valor de abertura negativo inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE sessao_caixa
+              ADD CONSTRAINT ck_sessao_caixa_valor_abertura
+              CHECK (valor_abertura >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE sessao_caixa
+              DROP CONSTRAINT ck_sessao_caixa_valor_abertura
+
+  - changeSet:
+      id: 013-06-unique-sessao-caixa-aberta
+      author: extensao-restaurante-2026
+      comment: Garante no maximo uma sessao de caixa aberta em todo o sistema.
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX uk_sessao_caixa_unica_aberta
+              ON sessao_caixa ((status))
+              WHERE status = 'ABERTA'
+      rollback:
+        - sql:
+            sql: >
+              DROP INDEX uk_sessao_caixa_unica_aberta
