@@ -1,0 +1,86 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-01-create-mesa
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de mesas do salao do restaurante.
+      changes:
+        - createTable:
+            tableName: mesa
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_mesa
+                    nullable: false
+              - column:
+                  name: numero
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: capacidade
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: setor
+                  type: VARCHAR(60)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: mesa
+
+  - changeSet:
+      id: 008-02-unique-mesa-numero
+      author: extensao-restaurante-2026
+      comment: Impede numeros de mesa duplicados.
+      changes:
+        - addUniqueConstraint:
+            tableName: mesa
+            columnNames: numero
+            constraintName: uk_mesa_numero
+      rollback:
+        - dropUniqueConstraint:
+            tableName: mesa
+            constraintName: uk_mesa_numero
+
+  - changeSet:
+      id: 008-03-check-capacidade-mesa
+      author: extensao-restaurante-2026
+      comment: Impede capacidade menor ou igual a zero inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE mesa
+              ADD CONSTRAINT ck_mesa_capacidade
+              CHECK (capacidade > 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE mesa
+              DROP CONSTRAINT ck_mesa_capacidade
+
+  - changeSet:
+      id: 008-04-check-status-mesa
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE mesa
+              ADD CONSTRAINT ck_mesa_status
+              CHECK (status IN ('LIVRE', 'OCUPADA', 'RESERVADA', 'INTERDITADA'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE mesa
+              DROP CONSTRAINT ck_mesa_status

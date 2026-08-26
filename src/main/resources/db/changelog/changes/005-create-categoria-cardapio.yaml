@@ -1,0 +1,84 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-01-create-categoria-cardapio
+      author: extensao-restaurante-2026
+      comment: Cria a tabela que classifica os itens do cardapio do restaurante.
+      changes:
+        - createTable:
+            tableName: categoria_cardapio
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_categoria_cardapio
+                    nullable: false
+              - column:
+                  name: nome
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: descricao
+                  type: VARCHAR(200)
+              - column:
+                  name: ordem_exibicao
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: categoria_cardapio
+
+  - changeSet:
+      id: 005-02-unique-categoria-cardapio-nome
+      author: extensao-restaurante-2026
+      comment: Impede categorias de cardapio com o mesmo nome.
+      changes:
+        - addUniqueConstraint:
+            tableName: categoria_cardapio
+            columnNames: nome
+            constraintName: uk_categoria_cardapio_nome
+      rollback:
+        - dropUniqueConstraint:
+            tableName: categoria_cardapio
+            constraintName: uk_categoria_cardapio_nome
+
+  - changeSet:
+      id: 005-03-check-ordem-exibicao
+      author: extensao-restaurante-2026
+      comment: Impede ordem de exibicao negativa inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE categoria_cardapio
+              ADD CONSTRAINT ck_categoria_cardapio_ordem_exibicao
+              CHECK (ordem_exibicao >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE categoria_cardapio
+              DROP CONSTRAINT ck_categoria_cardapio_ordem_exibicao
+
+  - changeSet:
+      id: 005-04-check-status-categoria-cardapio
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE categoria_cardapio
+              ADD CONSTRAINT ck_categoria_cardapio_status
+              CHECK (status IN ('ATIVO', 'INATIVO'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE categoria_cardapio
+              DROP CONSTRAINT ck_categoria_cardapio_status

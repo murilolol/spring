@@ -1,0 +1,189 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-01-create-item-cardapio
+      author: extensao-restaurante-2026
+      comment: Cria a tabela principal de itens do cardapio do restaurante.
+      changes:
+        - createTable:
+            tableName: item_cardapio
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_item_cardapio
+                    nullable: false
+              - column:
+                  name: codigo
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: nome
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: descricao
+                  type: VARCHAR(300)
+              - column:
+                  name: preco_venda
+                  type: NUMERIC(18,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tempo_preparo_minutos
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: secao_preparo
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: exige_preparo
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: controla_estoque
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: saldo_estoque
+                  type: NUMERIC(18,3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_cadastro
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: categoria_cardapio_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: item_cardapio
+
+  - changeSet:
+      id: 006-02-unique-item-cardapio-codigo
+      author: extensao-restaurante-2026
+      comment: Garante a unicidade global do codigo do item de cardapio.
+      changes:
+        - addUniqueConstraint:
+            tableName: item_cardapio
+            columnNames: codigo
+            constraintName: uk_item_cardapio_codigo
+      rollback:
+        - dropUniqueConstraint:
+            tableName: item_cardapio
+            constraintName: uk_item_cardapio_codigo
+
+  - changeSet:
+      id: 006-03-foreign-key-categoria-cardapio
+      author: extensao-restaurante-2026
+      comment: Liga cada item de cardapio a sua categoria.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: item_cardapio
+            baseColumnNames: categoria_cardapio_id
+            referencedTableName: categoria_cardapio
+            referencedColumnNames: id
+            constraintName: fk_item_cardapio_categoria_cardapio
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: item_cardapio
+            constraintName: fk_item_cardapio_categoria_cardapio
+
+  - changeSet:
+      id: 006-04-check-preco-venda
+      author: extensao-restaurante-2026
+      comment: Impede preco de venda negativo inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              ADD CONSTRAINT ck_item_cardapio_preco_venda
+              CHECK (preco_venda >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              DROP CONSTRAINT ck_item_cardapio_preco_venda
+
+  - changeSet:
+      id: 006-05-check-tempo-preparo
+      author: extensao-restaurante-2026
+      comment: Impede tempo de preparo negativo inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              ADD CONSTRAINT ck_item_cardapio_tempo_preparo
+              CHECK (tempo_preparo_minutos >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              DROP CONSTRAINT ck_item_cardapio_tempo_preparo
+
+  - changeSet:
+      id: 006-06-check-saldo-estoque
+      author: extensao-restaurante-2026
+      comment: Impede saldo negativo inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              ADD CONSTRAINT ck_item_cardapio_saldo_estoque
+              CHECK (saldo_estoque >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              DROP CONSTRAINT ck_item_cardapio_saldo_estoque
+
+  - changeSet:
+      id: 006-07-check-secao-preparo
+      author: extensao-restaurante-2026
+      comment: Restringe a secao de preparo aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              ADD CONSTRAINT ck_item_cardapio_secao_preparo
+              CHECK (secao_preparo IN ('COZINHA', 'BAR', 'SOBREMESA'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              DROP CONSTRAINT ck_item_cardapio_secao_preparo
+
+  - changeSet:
+      id: 006-08-check-status-item-cardapio
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              ADD CONSTRAINT ck_item_cardapio_status
+              CHECK (status IN ('ATIVO', 'INATIVO'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              DROP CONSTRAINT ck_item_cardapio_status
