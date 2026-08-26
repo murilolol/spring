@@ -1,221 +1,181 @@
-# restaurante2026
+# Restaurante 2026 — API RESTful de Gestão de Restaurantes
 
-API didatica de gestao de pedidos de restaurante, desenvolvida na disciplina de Desenvolvimento de Sistemas do curso de Sistemas de Informacao, seguindo a estrutura pedagogica do repositorio de referencia [`suporteos2026`](https://github.com/jeffersonarpasserini/suporteos2026) (Prof. Jefferson Passerini).
+[![Java 21](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot 3.4.3](https://img.shields.io/badge/Spring_Boot-3.4.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Liquibase](https://img.shields.io/badge/Liquibase-Schema_Migrations-2E8B57?style=flat-square&logo=liquibase&logoColor=white)](https://www.liquibase.org/)
+[![Spring Security](https://img.shields.io/badge/Spring_Security-HTTP_Basic-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
+[![JUnit 5](https://img.shields.io/badge/JUnit_5-354_tests_passed-25A162?style=flat-square&logo=junit5&logoColor=white)](https://junit.org/junit5/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
-O repositorio esta hoje no ponto de quebra da **Aula 04**: dominio em Java puro, persistencia com Spring Data JPA, PostgreSQL e Liquibase. Nao ha frontend — o curso cobre apenas a API.
+O **Restaurante 2026** é uma API RESTful de alto desempenho e arquitetura distribuída projetada para automatizar integralmente a operação de estabelecimentos gastronômicos. A aplicação contempla desde a gestão de cardápios e ocupação de salão até a comunicação em tempo real com a fila da cozinha, controle de comandas e fechamento financeiro de turnos de caixa.
 
-## Dominio do projeto
+---
 
-- **Categoria de produto**: classificacao dos itens do cardapio (Entradas, Pratos Principais, Bebidas, Sobremesas).
-- **Produto**: item do cardapio, identificado por codigo unico, com saldo em estoque e valor unitario.
+## 📌 Sumário
 
-Detalhamento completo em [`docs/tema-do-projeto.md`](docs/tema-do-projeto.md).
+- [Destaques de Arquitetura](#-destaques-de-arquitetura)
+- [Módulos do Sistema](#-módulos-do-sistema)
+- [Tecnologias Utilizadas](#-tecnologias-utilizadas)
+- [Arquitetura & Design Pattern](#-arquitetura--design-pattern)
+- [Como Executar o Projeto](#-como-executar-o-projeto)
+- [Autenticação e Controle de Acesso](#-autenticação-e-controle-de-acesso)
+- [Documentação Complementar](#-documentação-complementar)
+- [Autoria](#-autoria)
 
-## Requisitos
+---
 
-- Java 21
-- Git
-- PostgreSQL 16+ (local ou em container) para os profiles `dev` e `test`
-- IntelliJ IDEA (recursos Ultimate para o assistente Spring) ou qualquer editor, usando o Spring Initializr como caminho independente da IDE
-- Maven Wrapper (incluido no repositorio, nao requer instalacao manual)
+## 🚀 Destaques de Arquitetura
 
-## Estrutura do projeto
+- **Domain-Driven Design (DDD)**: Entidades ricas com validação de invariantes e encarte de comportamentos no próprio modelo de domínio.
+- **Persistência Auditável e Versionada**: Gerenciamento de esquema relacional através do Liquibase com 16 changeset migrações incrementais em YAML e validação JPA via `ddl-auto=validate`.
+- **Precisão Financeira Estrita**: Emprego exclusivo de `java.math.BigDecimal` para representação de moedas e quantidades, eliminando erros de arredondamento inerentes ao padrão IEEE 754.
+- **Máquinas de Estado Finitas**: Ciclos de vida orientados a estado para Pedidos (*RECEBIDO → EM_PREPARO → PRONTO → ENTREGUE / CANCELADO*), Comandas (*ABERTA → CONTA_SOLICITADA → PAGA → FECHADA*) e Caixa (*ABERTO → FECHADO*).
+- **Padronização de Erros RFC 7807**: Tratamento global de exceções produzindo payloads estruturados em `application/problem+json`.
+- **Fidelidade Tecnológica de Testes**: Suíte integrada com 354 testes executando contra instância real de PostgreSQL, sem dependência de bancos em memória (H2).
+
+---
+
+## 🧩 Módulos do Sistema
+
+1. **Cardápio**: Categorização, precificação, seções de preparo (Cozinha/Bar) e controle de estoque.
+2. **Clientes**: Cadastro unificado e histórico de consumo.
+3. **Mesas**: Controle de ocupação do salão (*LIVRE*, *OCUPADA*, *RESERVADA*).
+4. **Comandas**: Vinculação por mesa ou cliente, aglutinação de consumo, transferência de mesas e cálculo de conta.
+5. **Pedidos**: Lançamento de itens e orquestração de transição de status.
+6. **Cozinha**: Fila de preparo distribuída por seção com acompanhamento ao vivo.
+7. **Caixa & Financeiro**: Abertura/fechamento de turnos, sangrias, suprimentos e quitação de pagamentos.
+
+---
+
+## 🛠 Tecnologias Utilizadas
+
+- **Linguagem**: Java 21 (LTS)
+- **Framework Core**: Spring Boot 3.4.3
+- **Camada de Persistência**: Spring Data JPA / Hibernate 7.x
+- **Banco de Dados**: PostgreSQL 16
+- **Versionamento de Schema**: Liquibase
+- **Segurança**: Spring Security (HTTP Basic Authentication)
+- **Build & Dependency Management**: Apache Maven (via Maven Wrapper)
+- **Testes Automatizados**: JUnit 5, AssertJ, MockMvc
+
+---
+
+## 📐 Arquitetura & Design Pattern
+
+A aplicação adota a **Clean Architecture** dividida em 4 camadas fundamentais:
 
 ```text
-restaurante2026/
-├── .editorconfig
-├── .env.example
-├── .gitattributes
-├── .gitignore
-├── .mvn/wrapper/
-├── docs/
-│   ├── API.md
-│   ├── ARQUITETURA.md
-│   └── tema-do-projeto.md
-├── mvnw
-├── mvnw.cmd
-├── pom.xml
-└── src/
-    ├── main/
-    │   ├── java/com/curso/restaurante/
-    │   │   ├── Restaurante2026Application.java
-    │   │   ├── api/HealthController.java
-    │   │   └── domain/
-    │   │       ├── CategoriaProduto.java
-    │   │       ├── Produto.java
-    │   │       └── Status.java
-    │   └── resources/
-    │       ├── application.properties
-    │       ├── application-dev.properties
-    │       ├── application-prod.properties
-    │       └── db/changelog/
-    │           ├── db.changelog-master.yaml
-    │           └── changes/
-    │               ├── 001-create-categoria-produto.yaml
-    │               └── 002-create-produto.yaml
-    └── test/
-        ├── java/com/curso/restaurante/
-        │   ├── Restaurante2026ApplicationTests.java
-        │   └── domain/
-        │       ├── CategoriaProdutoTest.java
-        │       ├── ProdutoTest.java
-        │       └── PersistenciaJpaTest.java
-        └── resources/application-test.properties
+com.curso.restaurante
+├── config/            # Configurações de segurança, handlers RFC 7807 e inicialização
+├── api/               # Controllers REST e DTOs com validação de contrato (Bean Validation)
+├── domain/            # Entidades ricas de domínio, máquinas de estado e regras de negócio
+├── repository/        # Repositórios Spring Data JPA e queries otimizadas
+└── service/           # Camada de serviços de aplicação, orquestração e controle transacional
 ```
 
-Detalhes de responsabilidade de cada camada em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+Visão detalhada com diagramas Mermaid, mapeamento E-R de 12 tabelas e fluxogramas em **[`docs/ARQUITETURA.md`](docs/ARQUITETURA.md)**.
 
-## Configurando o banco de dados
+---
 
-Na primeira execucao, copie `.env.example` para `.env` e preencha `DB_DEV_PASSWORD`/`DB_TEST_PASSWORD` com a senha do usuario `restaurante_app`. Mantenha `.env` fora do Git (ja coberto pelo `.gitignore`).
+## ⚙️ Como Executar o Projeto
 
-Crie o usuario e os bancos no PostgreSQL local (via `psql` ou pgAdmin4):
+### Pré-requisitos
+- **Java 21** (JDK 21+)
+- **PostgreSQL 16+** (executando localmente ou via container Docker na porta `5432`)
+- **Git**
+
+---
+
+### 1. Preparação do Banco de Dados
+
+Conecte-se ao seu ambiente PostgreSQL (`psql` ou pgAdmin) e crie o usuário e os bancos de dados da aplicação:
 
 ```sql
-CREATE ROLE restaurante_app WITH LOGIN PASSWORD 'defina-uma-senha-local';
+CREATE ROLE restaurante_app WITH LOGIN PASSWORD 'sua_senha_local';
 CREATE DATABASE restaurante2026_dev OWNER restaurante_app;
 CREATE DATABASE restaurante2026_test OWNER restaurante_app;
 ```
 
-O Liquibase cria as tabelas (`categoria_produto`, `produto`) automaticamente na primeira inicializacao da aplicacao ou dos testes — nao e necessario criar tabelas manualmente. Para conferir pelo pgAdmin4, conecte em `localhost:5432` com o usuario `restaurante_app` e abra o banco `restaurante2026_dev`.
+---
 
-## Executando o projeto
+### 2. Configuração de Variáveis de Ambiente
 
-No Windows:
-
-```powershell
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-No macOS ou Linux:
+Crie a sua cópia do arquivo `.env` na raiz do projeto com base no modelo `.env.example`:
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+cp .env.example .env
 ```
 
-Com a aplicacao iniciada, acesse <http://localhost:8080/api/health>. A resposta esperada e `OK`, com status HTTP `200`.
+Ajuste as credenciais no arquivo `.env`:
 
-```bash
-curl http://localhost:8080/api/health
+```env
+DB_DEV_URL=jdbc:postgresql://localhost:5432/restaurante2026_dev
+DB_DEV_USERNAME=restaurante_app
+DB_DEV_PASSWORD=sua_senha_local
+
+DB_TEST_URL=jdbc:postgresql://localhost:5432/restaurante2026_test
+DB_TEST_USERNAME=restaurante_app
+DB_TEST_PASSWORD=sua_senha_local
+
+ADMIN_BOOTSTRAP_PASSWORD=admin123
 ```
 
+---
+
+### 3. Inicialização do Servidor
+
+Execute a aplicação através do Maven Wrapper:
+
+#### Windows (PowerShell):
 ```powershell
-Invoke-WebRequest http://localhost:8080/api/health
+.\mvnw.cmd spring-boot:run
 ```
 
-## Executando os testes
+#### Linux / macOS (Terminal):
+```bash
+./mvnw spring-boot:run
+```
 
-Os testes de persistencia acessam `restaurante2026_test` e leem `DB_TEST_PASSWORD` do `.env` local. Ao todo sao 17 testes: 12 de regras de dominio (`CategoriaProdutoTest`, `ProdutoTest`, sem depender de banco), o `contextLoads` da aplicacao e 4 de persistencia (`PersistenciaJpaTest`, contra PostgreSQL real).
+O Liquibase aplicará todas as migrações automaticamente no PostgreSQL e a API estará disponível no endereço:
+`http://localhost:8080`
 
-Suite completa (Windows):
+---
+
+### 4. Execução da Suíte de Testes
+
+Para rodar os 354 testes integrados contra o banco de dados PostgreSQL de teste:
 
 ```powershell
 .\mvnw.cmd test
 ```
 
-Suite completa (macOS ou Linux):
+---
 
+## 🔐 Autenticação e Controle de Acesso
+
+A API utiliza o esquema **HTTP Basic Authentication**. No perfil de desenvolvimento (`dev`), um usuário administrador é provisionado automaticamente:
+
+- **Usuário**: `admin`
+- **Senha Padrão**: `admin123` (lida de `ADMIN_BOOTSTRAP_PASSWORD` no `.env`)
+
+Exemplo de verificação de autenticação:
 ```bash
-./mvnw test
+curl -u admin:admin123 http://localhost:8080/api/auth/me
 ```
 
-Apenas as regras de dominio, sem precisar de PostgreSQL rodando:
+---
 
-```powershell
-.\mvnw.cmd test "-Dtest=CategoriaProdutoTest,ProdutoTest"
-```
+## 📄 Documentação Complementar
 
-Apenas a classe de persistencia (exige `restaurante2026_test` acessivel):
+- 🏗 **[Arquitetura do Sistema (`docs/ARQUITETURA.md`)](docs/ARQUITETURA.md)** — Diagramas de camadas, modelo de dados relacional e máquinas de estado.
+- 📡 **[Especificação de API (`docs/API.md`)](docs/API.md)** — Endpoints, payloads JSON, contratos de erro RFC 7807 e paginação.
+- 📋 **[Especificação do Domínio (`docs/tema-do-projeto.md`)](docs/tema-do-projeto.md)** — Regras de negócio, catálogo do cardápio e rubrica de domínio.
 
-```powershell
-.\mvnw.cmd test "-Dtest=PersistenciaJpaTest"
-```
+---
 
-Ao final, o resumo esperado e:
+## 👨‍💻 Autoria
 
-```text
-Tests run: 17, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
-```
-
-## Comandos uteis
-
-| Objetivo | Comando (Windows) |
-|---|---|
-| Compilar sem rodar testes | `.\mvnw.cmd compile` |
-| Rodar a suite completa | `.\mvnw.cmd test` |
-| Empacotar em um JAR executavel | `.\mvnw.cmd package` |
-| Empacotar pulando os testes | `.\mvnw.cmd package -DskipTests` |
-| Limpar artefatos de build (`target/`) | `.\mvnw.cmd clean` |
-| Ver a versao do Maven/Java usada pelo wrapper | `.\mvnw.cmd -v` |
-
-Depois de `package`, o JAR fica em `target/restaurante2026-0.0.1-SNAPSHOT.jar` e pode ser executado sem o Maven:
-
-```powershell
-java -jar target\restaurante2026-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
-```
-
-No macOS ou Linux, os mesmos comandos usam `./mvnw` no lugar de `.\mvnw.cmd` e `/` no lugar de `\` nos caminhos.
-
-## Consultando o banco pelo pgAdmin4 ou psql
-
-Com a aplicacao (ou os testes) executada ao menos uma vez, o Liquibase ja criou o esquema. Para conferir:
-
-- **pgAdmin4**: conecte em `localhost:5432`, usuario `restaurante_app`, banco `restaurante2026_dev`, e navegue ate `Schemas > public > Tables`.
-- **psql**:
-
-```sql
-\c restaurante2026_dev
-\dt
-SELECT id, nome, status FROM categoria_produto;
-SELECT id, codigo, descricao, saldo_estoque, valor_unitario FROM produto;
-```
-
-As tabelas comecam vazias — nenhuma massa de dados e inserida automaticamente ate a aula que introduzir os controllers REST.
-
-## Roteiro do curso
-
-O sistema foi construido incrementalmente. Cada aula termina em um estado executavel, registrado por um commit e, apos validacao, por uma tag Git no formato `aula-NN-*`.
-
-```mermaid
-gitGraph
-    commit id: "inicio: README, .editorconfig, .gitignore" tag: "aula-00-inicio"
-    commit id: "ambiente Java 21 validado" tag: "aula-01-ambiente"
-    commit id: "projeto Spring Boot + /api/health" tag: "aula-02-projeto-spring-boot"
-    commit id: "CategoriaProduto e Produto em Java puro" tag: "aula-03-dominio"
-    commit id: "JPA + PostgreSQL + Liquibase" tag: "aula-04-jpa-postgresql-liquibase"
-```
-
-| Aula | Tema | Estado neste repositorio |
-|---|---|---|
-| 00 | GitHub e inicio do projeto | Concluida |
-| 01 | Configuracao do ambiente | Concluida (atividade escrita pendente) |
-| 02 | Criacao do projeto Spring Boot e definicao do tema | Concluida |
-| 03 | Modelagem de dominio com Java puro | Concluida |
-| 04 | Persistencia com JPA, PostgreSQL e Liquibase | Concluida (ponto de quebra atual) |
-
-## Documentacao da API
-
-Endpoints disponiveis, roadmap, UML do dominio e resultados de teste em [`docs/API.md`](docs/API.md).
-
-## Arquitetura
-
-Diagramas de contexto, camadas, modelo de dominio e fluxo de persistencia em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
-
-## Publicando no GitHub
-
-O historico Git local ja segue o padrao do curso — um commit e uma tag anotada por aula (`aula-00-inicio` ate `aula-04-jpa-postgresql-liquibase`). Falta apenas ligar o repositorio local a um remoto e publicar:
-
-```powershell
-git remote add origin https://github.com/SEU-USUARIO/restaurante2026.git
-git push -u origin main
-git push origin --tags
-```
-
-Antes do push, confirme que nenhuma credencial foi commitada:
-
-```powershell
-git grep -n -E "DB_(DEV_|TEST_)?PASSWORD=.+" -- ":!*.example"
-```
-
-Esse comando nao deve encontrar nada — `.env` real nunca foi adicionado a nenhum commit, apenas `.env.example` (com placeholders).
+Desenvolvido por **Murilo Rocha Silva**  
+Curso de Bacharelado em Sistemas de Informação — **UniFEF**  
+GitHub: [@murilolol](https://github.com/murilolol)

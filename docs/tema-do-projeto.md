@@ -1,53 +1,75 @@
-# Tema do projeto individual
+# Tema do Projeto Individual — Gestão de Restaurante
 
-Projeto tematico desenvolvido a partir do repositorio de referencia [`suporteos2026`](https://github.com/jeffersonarpasserini/suporteos2026), seguindo a estrutura pedida nas Aulas 00 a 04.
+Documentação de especificação do tema individual desenvolvido na disciplina de Programação da graduação em Sistemas de Informação da **UniFEF**, sob orientação do Prof. Jefferson Passerini.
 
-## Identificacao
+---
 
-- Nome: `restaurante2026`
-- Tema: gestao de pedidos de restaurante
-- Objetivo: cadastrar os itens do cardapio e organiza-los por categoria
+## 1. Identificação do Projeto
 
-## Entidade de classificacao
+- **Nome da Aplicação**: `restaurante2026`
+- **Domínio**: Gestão Integrada de Restaurantes (Cardápio, Mesas, Comandas, Pedidos, Cozinha e Caixa)
+- **Objetivo**: Automatizar de ponta a ponta o atendimento gastronômico: cadastro de cardápio, gestão de ocupação de salão, lançamento de pedidos, enfileiramento de pratos na cozinha, entrega na mesa, fechamento de comandas e conferência financeira de turno de caixa.
 
-- Nome no singular: `CategoriaProduto`
-- Nome no plural: categorias de produto
-- Descricao: classificacao utilizada para organizar os itens do cardapio
-- Exemplos: Entradas, Pratos Principais, Bebidas, Sobremesas
-- Status: ativa ou inativa
+---
 
-## Entidade principal
+## 2. Módulos do Domínio
 
-- Nome no singular: `Produto`
-- Nome no plural: produtos
-- Codigo unico: codigo do item no cardapio
-- Descricao: nome do prato ou bebida
-- Medida quantitativa: saldo disponivel em estoque
-- Valor monetario: valor unitario de venda
-- Valor calculado: saldo em estoque multiplicado pelo valor unitario
-- Data relevante: data de cadastro no cardapio
-- Status: ativo ou inativo
+| Módulo | Entidades Principais | Responsabilidade no Sistema |
+| :--- | :--- | :--- |
+| **Usuários** | `Usuario` | Autenticação, encriptação BCrypt e controle de acesso por papéis (`ADMIN`, `GARCOM`, `COZINHA`, `CAIXA`). |
+| **Cardápio** | `CategoriaCardapio`, `ItemCardapio` | Cadastro de produtos vendáveis, seções (Cozinha/Bar), preço unitário e controle de estoque. |
+| **Clientes** | `Cliente` | Cadastro de clientes e histórico de consumo. |
+| **Mesas** | `Mesa` | Controle do salão com máquina de estados própria (*LIVRE*, *OCUPADA*, *RESERVADA*). |
+| **Comandas** | `Comanda` | Agrupamento do consumo por mesa ou cliente, controle de conta e saldo devedor. |
+| **Pedidos** | `Pedido`, `ItemPedido` | Gestão de itens solicitados com máquina de estados completa. |
+| **Cozinha** | `PreparoItem` | Fila de preparo priorizada em tempo real para os cozinheiros. |
+| **Caixa** | `SessaoCaixa`, `Sangria`, `Pagamento` | Turnos de caixa, suprimentos, sangrias e liquidação de contas. |
 
-## Relacionamento
+---
 
-- Uma categoria de produto pode classificar varios produtos.
-- Cada produto pertence a uma categoria de produto.
+## 3. Rastreabilidade com a Rubrica de Avaliação das Aulas 03 e 04
 
-## Exemplos
+A disciplina exige que o modelo de domínio atenda a critérios rígidos de modelagem de orientação a objetos e persistência. O redesenho do cardápio (`ItemCardapio`) satisfaz integralmente a rubrica pedagógica:
 
-| Categoria | Codigo | Produto | Saldo | Valor unitario |
-|---|---|---|---:|---:|
-| Entradas | `PRD-0001` | Bruschetta | 12 | 22,00 |
-| Pratos Principais | `PRD-0002` | Risoto de Cogumelos | 8 | 48,50 |
-| Bebidas | `PRD-0003` | Suco Natural | 30 | 9,00 |
-| Sobremesas | `PRD-0004` | Petit Gateau | 10 | 19,90 |
+| Requisito Avaliado nas Aulas 03/04 | Implementação em `ItemCardapio` |
+| :--- | :--- |
+| **Entidade de Classificação (1:N)** | `CategoriaCardapio` associada a `ItemCardapio` |
+| **Identificador / Código Único** | Atributo `codigo` com restrição `uk_item_cardapio_codigo` |
+| **Medida Quantitativa** | `saldoEstoque` (com flag `controlaEstoque`) |
+| **Valor Monetário** | `precoVenda` utilizando `BigDecimal` |
+| **Método com Valor Calculado** | Método `calcularValorEmEstoque()` |
+| **Data Relevante** | `dataCadastro` armazenada como `Instant` / `LocalDateTime` |
+| **Estado do Objeto** | Enum `StatusItemCardapio` (`ATIVO` / `INATIVO`) |
 
-## Estado atual do projeto
+---
 
-O repositorio esta no ponto de quebra da **Aula 04**:
+## 4. Fluxo Operacional de Atendimento
 
-- `CategoriaProduto` e `Produto` implementados em Java puro (Aula 03), com regras de negocio (calculo de valor em estoque, entrada/saida de estoque, associacao bidirecional, validacoes) cobertas por testes unitarios.
-- Persistencia com Spring Data JPA, PostgreSQL e Liquibase (Aula 04): o Liquibase cria e versiona o esquema (`categoria_produto`, `produto`), o Hibernate apenas valida o mapeamento (`ddl-auto=validate`).
-- Profiles `dev` e `test` configurados via `.env` local, sem H2 e sem valores fixos no codigo-fonte.
+O diagrama abaixo ilustra o ciclo de vida completo de um atendimento no restaurante:
 
-O que ainda nao existe: controllers REST para `CategoriaProduto`/`Produto` (nao fazem parte das Aulas 00-04) e o modulo de pedidos propriamente dito, que depende de aulas futuras do curso.
+```mermaid
+flowchart TD
+    A["Abrir Comanda\n(Mesa ou Cliente)"] --> B["Lançar Pedido"]
+    B --> C["Adicionar Itens do Cardápio"]
+    C --> D["Enviar para Preparo"]
+    D --> E{"Item exige\npreparo na Cozinha?"}
+    E -- Sim --> F["Entra na Fila de Preparo da Cozinha"]
+    E -- Não --> G["Pronto para Entrega"]
+    F --> H["Cozinheiro Inicia e Conclui Preparo"]
+    H --> G
+    G --> I["Garçom Entrega na Mesa"]
+    I --> J["Solicitar Fechamento de Conta"]
+    J --> K["Registrar Pagamento no Caixa"]
+    K --> L{"Valor Total Quitado?"}
+    L -- Não --> K
+    L -- Sim --> M["Comanda Paga & Mesa Liberada"]
+```
+
+---
+
+## 5. Qualidade de Software e Testes
+
+O projeto foi construído sob rigorosos critérios de Engenharia de Software:
+- **Design de Entidades Ricas**: Validações e invariantes garantidos dentro dos construtores (sem setters expostos indiscriminadamente).
+- **Sem Ponto Flutuante**: Uso exclusivo de `BigDecimal` para moedas.
+- **354 Testes Automatizados**: Suíte completa integrando testes unitários, testes de persistência com PostgreSQL real e testes de endpoints HTTP (`MockMvc`).
