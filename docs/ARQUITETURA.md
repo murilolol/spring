@@ -1,132 +1,267 @@
-# Arquitetura
+# Arquitetura do Sistema
 
-Este documento descreve a arquitetura do projeto no ponto de quebra da Aula 04: API Spring Boot com dominio em Java puro, persistencia via Spring Data JPA e esquema versionado pelo Liquibase em PostgreSQL.
+Este documento descreve detalhadamente a arquitetura de software, o modelo de dados relacional, a topologia de camadas, as máquinas de estado e as decisões de engenharia adotadas na API **Restaurante 2026**.
 
-Para o contrato dos endpoints HTTP, o diagrama UML das classes de dominio e os resultados de teste, veja [`API.md`](API.md).
+Para a especificação dos endpoints HTTP, consulte [API.md](API.md). Para o detalhamento do domínio de negócio, consulte [tema-do-projeto.md](tema-do-projeto.md).
 
-## 1. Visao geral
+> **TL;DR** — A aplicação adota Clean Architecture em camadas estritas baseadas em Domain-Driven Design (DDD). O banco de dados PostgreSQL 16 é evoluído por migrações incrementais via Liquibase com `ddl-auto=validate`. A consistência das regras de negócio é protegida por entidades ricas no domínio e máquinas de estado explícitas.
+
+<br>
+
+## Índice
+
+- [Visão geral da topologia](#visão-geral-da-topologia)
+- [Divisão em camadas e pacotes](#divisão-em-camadas-e-pacotes)
+- [Modelo relacional e entidades](#modelo-relacional-e-entidades)
+- [Máquinas de estado](#máquinas-de-estado)
+- [Gerenciamento de schema com Liquibase](#gerenciamento-de-schema-com-liquibase)
+- [Segurança e controle de acesso](#segurança-e-controle-de-acesso)
+- [Exemplo de ciclo de vida HTTP](#exemplo-de-ciclo-de-vida-http)
+- [Perfis de ambiente](#perfis-de-ambiente)
+- [Decisões de engenharia](#decisões-de-engenharia)
+
+---
+
+## Visão geral da topologia
+
+O sistema separa estritamente a camada de apresentação HTTP, a camada de serviço de aplicação e a persistência relacional do **modelo de domínio puro**.
 
 ```mermaid
 flowchart LR
-    C["Cliente HTTP\n(navegador, curl, Postman)"] -->|"GET /api/health"| APP["restaurante2026\nSpring Boot (Tomcat embutido)"]
-    APP -->|"JDBC"| PG[("PostgreSQL\nrestaurante2026_dev / _test")]
-    LQ["Liquibase"] -->|"cria/versiona o esquema"| PG
-    APP -->|"200 OK\ncorpo: OK"| C
+    subgraph Client["Cliente HTTP"]
+        C["curl / Postman / Client Web / Mobile"]
+    end
+
+    subgraph Server["Servidor Spring Boot 3.4"]
+        SEC["Spring Security\n(HTTP Basic)"]
+        API["Controllers REST\n+ DTOs"]
+        SVC["Services Transacionais\n(@Transactional)"]
+        DOM["Modelo de Domínio\n(Entidades Ricas)"]
+        REPO["Spring Data JPA\n(Repositories)"]
+    end
+
+    subgraph DB["Infraestrutura de Banco"]
+        PG[(PostgreSQL 16)]
+        LB["Liquibase\n(16 Migrações YAML)"]
+    end
+
+    C -- "HTTP Basic Header" --> SEC
+    SEC --> API
+    API --> SVC
+    SVC --> DOM
+    SVC --> REPO
+    REPO -- "JDBC / SQL" --> PG
+    LB -- "ddl-auto=validate" --> PG
 ```
 
-Nao existe frontend neste repositorio: o curso `suporteos2026` cobre apenas a API.
+---
 
-## 2. Camadas e pacotes
+## Divisão em camadas e pacotes
 
-```mermaid
-flowchart TD
-    C["Cliente"] -->|"HTTP / JSON"| A["api\n(Controller)"]
-    A -->|"chama caso de uso"| S["service\n(ainda nao criado)"]
-    S -.->|"usa"| D["domain\nCategoriaProduto, Produto, Status"]
-    D -->|"mapeado por JPA"| R["repository\n(ainda nao criado)"]
-    R -->|"SQL via Hibernate"| B["PostgreSQL"]
-```
+O código-fonte é organizado sob a raiz `com.curso.restaurante`:
 
 ```text
 com.curso.restaurante
-├── api
-│   └── HealthController       -> GET /api/health
-└── domain
-    ├── CategoriaProduto       -> entidade JPA, classifica produtos
-    ├── Produto                -> entidade JPA, item do cardapio
-    └── Status                 -> enum ATIVO / INATIVO
+├── config/            Configuration, SecurityConfig, Handlers RFC 7807, Bootstrap Admin
+├── api/               Controllers REST, DTOs de Request/Response e validações (@Valid)
+├── domain/            Entidades ricas, invariantes de negócio, enums e exceções
+├── repository/        Interfaces Spring Data JPA e JPQL queries
+└── service/           Serviços de aplicação, orquestração e controle transacional
 ```
 
-| Camada | Responsabilidade | Estado |
-|---|---|---|
-| `api` | Receber requisicoes HTTP e construir a resposta | Implementada (somente health check) |
-| `domain` | Representar `CategoriaProduto` e `Produto`, aplicar regras de negocio | Implementada (Aula 03) |
-| `repository` | Acessar a persistencia via Spring Data JPA | Nao criada — nenhum caso de uso de consulta/CRUD exposto ainda |
-| `service` | Coordenar casos de uso entre `api`, `domain` e `repository` | Nao criada |
+```mermaid
+flowchart TD
+    subgraph api ["Camada API (Presentation)"]
+        Controller["Controllers REST (@RestController)"]
+        DTO["DTOs (Request / Response)\nBean Validation (@Valid)"]
+    end
 
-`repository` e `service` so existem quando houver um caso de uso concreto que os exija; ate a Aula 04 a persistencia e exercitada diretamente por testes com `EntityManager` e `JdbcTemplate`.
+    subgraph service ["Camada Service (Application)"]
+        Service["Services (@Service)\n@Transactional"]
+    end
 
-## 3. Modelo de dominio
+    subgraph domain ["Camada Domain (Business)"]
+        Entity["Entidades Ricas (Java puro + JPA)\nRegras & Invariantes"]
+        Enum["Enums & Máquinas de Estado"]
+    end
+
+    subgraph repository ["Camada Repository (Infrastructure)"]
+        Repo["Spring Data JPA Interfaces"]
+    end
+
+    Controller --> DTO
+    Controller --> Service
+    Service --> Entity
+    Service --> Repo
+    Repo --> DB[(PostgreSQL)]
+```
+
+### Responsabilidades por camada
+
+| Camada | Responsabilidade | Restrições |
+| :--- | :--- | :--- |
+| **`api`** | Tradução HTTP ↔ DTO, validações de contrato (`@Valid`), serialização JSON | Proibido conter regras de negócio ou chamadas SQL diretas |
+| **`service`** | Orquestração de serviços, transações (`@Transactional`), regras que cruzam agregados | Proibido acessar o banco sem passar pelas interfaces Repository |
+| **`domain`** | Entidades ricas, invariantes de construtor, cálculos com `BigDecimal`, enums | Proibido depender de anotações Spring Web ou Spring Security |
+| **`repository`** | Interfaces JPA para persistência e recuperação de dados no PostgreSQL | Proibido conter decisões de regras de negócio |
+
+---
+
+## Modelo relacional e entidades
+
+O banco de dados é composto por 12 tabelas principais gerenciadas pelo Liquibase:
 
 ```mermaid
 erDiagram
-    CATEGORIA_PRODUTO {
-        bigint id PK
-        varchar nome
-        varchar status
-    }
-
-    PRODUTO {
-        bigint id PK
-        varchar codigo
-        varchar descricao
-        numeric saldo_estoque
-        numeric valor_unitario
-        date data_cadastro
-        varchar status
-        bigint categoria_produto_id FK
-    }
-
-    CATEGORIA_PRODUTO ||--o{ PRODUTO : classifica
+    USUARIO ||--o{ COMANDA : "abre"
+    USUARIO ||--o{ PEDIDO : "lanca"
+    USUARIO ||--o{ PREPARO_ITEM : "prepara"
+    USUARIO ||--o{ SESSAO_CAIXA : "opera"
+    USUARIO ||--o{ SANGRIA : "registra"
+    USUARIO ||--o{ PAGAMENTO : "registra"
+    CATEGORIA_CARDAPIO ||--o{ ITEM_CARDAPIO : "classifica"
+    CLIENTE ||--o{ COMANDA : "possui"
+    MESA ||--o{ COMANDA : "hospeda"
+    COMANDA ||--o{ PEDIDO : "agrupa"
+    COMANDA ||--o{ PAGAMENTO : "quita"
+    PEDIDO ||--o{ ITEM_PEDIDO : "contem"
+    ITEM_CARDAPIO ||--o{ ITEM_PEDIDO : "referencia"
+    ITEM_PEDIDO ||--|| PREPARO_ITEM : "enfileira"
+    SESSAO_CAIXA ||--o{ SANGRIA : "registra"
+    SESSAO_CAIXA ||--o{ PAGAMENTO : "concentra"
 ```
 
-Regras aplicadas em `Produto`:
+---
 
-- `calcularValorEstoque()` = `saldoEstoque * valorUnitario`, arredondado para 2 casas decimais.
-- `receberEstoque(quantidade)` / `retirarEstoque(quantidade)` rejeitam quantidades zero ou negativas; `retirarEstoque` tambem rejeita saldo insuficiente.
-- Codigo, descricao, saldo e valor unitario sao validados na criacao do objeto — nao existe estado invalido representavel em Java.
+## Máquinas de estado
 
-Regras aplicadas em `CategoriaProduto`:
+A integridade do fluxo de atendimento é garantida por transições orientadas a estado finitos. Transições inválidas disparam `TransicaoDeStatusInvalidaException` (HTTP 409 Conflict).
 
-- `adicionarProduto(produto)` mantem os dois lados da associacao consistentes e rejeita codigo duplicado dentro da mesma categoria.
-- Um `Produto` nao pode ser movido para outra `CategoriaProduto` depois de associado (`IllegalStateException`).
-
-O banco reforca as mesmas regras de forma independente da aplicacao: `CHECK` constraints para saldo/valor nao negativos e status valido, e `UNIQUE` para o codigo do produto — ver `PersistenciaJpaTest`.
-
-## 4. Persistencia
+### 1. Ciclo de vida do pedido (`StatusPedido`)
 
 ```mermaid
-sequenceDiagram
-    participant App as Spring Boot
-    participant LQ as Liquibase
-    participant DB as PostgreSQL
-
-    App->>LQ: Inicializacao do contexto
-    LQ->>DB: Aplica changesets pendentes\n(categoria_produto, produto)
-    LQ->>DB: Registra em databasechangelog
-    App->>DB: Hibernate valida o mapeamento\n(ddl-auto=validate)
+stateDiagram-v2
+    [*] --> RECEBIDO: Lançamento na comanda
+    RECEBIDO --> EM_PREPARO: Início do preparo na cozinha
+    EM_PREPARO --> PRONTO: Conclusão do prato
+    PRONTO --> ENTREGUE: Entrega na mesa pelo garçom
+    
+    RECEBIDO --> CANCELADO: Cancelamento com motivo
+    EM_PREPARO --> CANCELADO: Cancelamento excepcional
+    
+    ENTREGUE --> [*]
+    CANCELADO --> [*]
 ```
 
-- **Liquibase** e a unica fonte de verdade do esquema. O `master` inclui, em ordem, `001-create-categoria-produto.yaml` e `002-create-produto.yaml` (8 changesets no total).
-- **Hibernate** roda em modo `validate`: confere se as entidades Java batem com o esquema, mas nunca gera DDL.
-- **Profiles**: `dev` (`restaurante2026_dev`) e `test` (`restaurante2026_test`) leem usuario/senha de um `.env` local (fora do Git); `prod` le variaveis de ambiente do servidor.
-
-## 5. Decisoes tecnicas
-
-| Decisao | Motivo |
-|---|---|
-| Spring Boot 4.0.7, Java 21 | Versao congelada pelo curso para a turma de 2026 |
-| Dominio em Java puro validando suas proprias invariantes | As regras de negocio nao dependem do framework de persistencia para existir |
-| Liquibase versiona, Hibernate so valida | Evita duas fontes de verdade para o esquema do banco |
-| PostgreSQL nos tres profiles, sem H2 | O comportamento em teste precisa refletir o banco usado em producao |
-| Sem `repository`/`service` ainda | Camadas so sao criadas quando ha um caso de uso real que as exija |
-| Sem frontend | Fora do escopo do curso `suporteos2026`, que cobre apenas a API |
-
-## 6. Roteiro do curso
+### 2. Ciclo de vida da comanda (`StatusComanda`)
 
 ```mermaid
-gitGraph
-    commit id: "inicio: README, .editorconfig, .gitignore" tag: "aula-00-inicio"
-    commit id: "ambiente Java 21 validado" tag: "aula-01-ambiente"
-    commit id: "projeto Spring Boot + /api/health" tag: "aula-02-projeto-spring-boot"
-    commit id: "CategoriaProduto e Produto em Java puro" tag: "aula-03-dominio"
-    commit id: "JPA + PostgreSQL + Liquibase" tag: "aula-04-jpa-postgresql-liquibase"
+stateDiagram-v2
+    [*] --> ABERTA: Comanda vinculada à mesa/cliente
+    ABERTA --> CONTA_SOLICITADA: Solicitação do fechamento de conta
+    CONTA_SOLICITADA --> PAGA: Recebimento do pagamento no caixa
+    PAGA --> FECHADA: Liberação da mesa e encerramento
+    
+    FECHADA --> [*]
 ```
 
-| Aula | Tema | Estado neste repositorio |
-|---|---|---|
-| 00 | GitHub e inicio do projeto | Concluida |
-| 01 | Configuracao do ambiente | Concluida |
-| 02 | Criacao do projeto Spring Boot e definicao do tema | Concluida |
-| 03 | Modelagem de dominio com Java puro | Concluida |
-| 04 | Persistencia com JPA, PostgreSQL e Liquibase | Concluida (ponto de quebra atual) |
+---
+
+## Gerenciamento de schema com Liquibase
+
+A infraestrutura utiliza o Liquibase para versão e histórico de schema relacional. O Hibernate executa estritamente com `spring.jpa.hibernate.ddl-auto=validate`.
+
+As 16 migrações YAML localizam-se em `src/main/resources/db/changelog/changes/`:
+
+1. `001-create-categoria-produto.yaml`: Tabela inicial de categorias.
+2. `002-create-produto.yaml`: Tabela inicial de produtos.
+3. `003-create-usuario.yaml`: Tabela de usuários e credenciais.
+4. `004-drop-cardapio-legado.yaml`: Refatoração do modelo relacional.
+5. `005-create-categoria-cardapio.yaml`: Categorias do cardápio.
+6. `006-create-item-cardapio.yaml`: Itens do cardápio e controle de estoque.
+7. `007-create-cliente.yaml`: Tabela de clientes.
+8. `008-create-mesa.yaml`: Tabela de mesas e capacidade.
+9. `009-create-comanda.yaml`: Tabelas de comandas.
+10. `010-create-pedido.yaml`: Cabeçalho do pedido.
+11. `011-create-item-pedido.yaml`: Itens lançados no pedido.
+12. `012-create-preparo-item.yaml`: Fila de preparo da cozinha.
+13. `013-create-sessao-caixa.yaml`: Sessões e turnos de caixa.
+14. `014-create-sangria.yaml`: Movimentações financeiras de sangria/suprimento.
+15. `015-create-pagamento.yaml`: Formas e registros de pagamento.
+16. `016-indices-de-consulta.yaml`: Índices otimizados de banco de dados.
+
+---
+
+## Segurança e controle de acesso
+
+Segurança configurada via Spring Security:
+
+- **Autenticação**: HTTP Basic Authentication com credenciais no cabeçalho `Authorization`.
+- **Perfis (Roles)**:
+  - `ROLE_ADMIN`: Acesso completo.
+  - `ROLE_GARCOM`: Abertura de comanda, pedidos, mesas e clientes.
+  - `ROLE_COZINHA`: Acesso e manipulação da fila de preparo.
+  - `ROLE_CAIXA`: Turnos de caixa, sangrias e recebimento de pagamentos.
+- **Formato de Erro**: Payloads RFC 7807 (`application/problem+json`) para erros 401 Unauthorized e 403 Forbidden.
+
+---
+
+## Exemplo de ciclo de vida HTTP
+
+### Requisição: Lançar Pedido em Comanda
+
+```http
+POST /api/comandas/1/pedidos HTTP/1.1
+Host: localhost:8080
+Authorization: Basic YWRtaW46YWRtaW4xMjM=
+Content-Type: application/json
+
+{
+  "observacao": "Sem pimenta",
+  "itens": [
+    {
+      "itemCardapioId": 5,
+      "quantidade": 2
+    }
+  ]
+}
+```
+
+### Resposta: HTTP 201 Created
+
+```json
+{
+  "id": 12,
+  "comandaId": 1,
+  "status": "RECEBIDO",
+  "observacao": "Sem pimenta",
+  "valorTotal": 58.00,
+  "dataHoraCriacao": "2026-08-26T13:40:00Z",
+  "itens": [
+    {
+      "id": 24,
+      "itemCardapioId": 5,
+      "nomeItem": "Hambúrguer Artesanal",
+      "quantidade": 2,
+      "precoUnitario": 29.00,
+      "precoTotal": 58.00
+    }
+  ]
+}
+```
+
+---
+
+## Perfis de ambiente
+
+- **`dev`**: Ambiente de desenvolvimento local (`restaurante2026_dev`).
+- **`test`**: Ambiente de testes automatizados (`restaurante2026_test`).
+- **`prod`**: Ambiente de produção com credenciais injetadas por variáveis do ambiente host.
+
+---
+
+## Decisões de engenharia
+
+1. **`BigDecimal` para Valores Monetários**: Prevenção total de inconsistências de arredondamento IEEE 754 de tipos `float`/`double`.
+2. **Fidelidade de Testes no PostgreSQL Real**: Suíte de testes executa contra a mesma engine relacional de produção, garantindo suporte real a tipos, constraints e dialeto SQL.
+3. **Erros Padronizados (RFC 7807)**: Todo erro HTTP utiliza o contrato `application/problem+json`, garantindo clareza e previsibilidade nos clientes.

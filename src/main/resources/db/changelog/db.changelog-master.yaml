@@ -3,3 +3,31 @@ databaseChangeLog:
       file: db/changelog/changes/001-create-categoria-produto.yaml
   - include:
       file: db/changelog/changes/002-create-produto.yaml
+  - include:
+      file: db/changelog/changes/003-create-usuario.yaml
+  - include:
+      file: db/changelog/changes/004-drop-cardapio-legado.yaml
+  - include:
+      file: db/changelog/changes/005-create-categoria-cardapio.yaml
+  - include:
+      file: db/changelog/changes/006-create-item-cardapio.yaml
+  - include:
+      file: db/changelog/changes/007-create-cliente.yaml
+  - include:
+      file: db/changelog/changes/008-create-mesa.yaml
+  - include:
+      file: db/changelog/changes/009-create-comanda.yaml
+  - include:
+      file: db/changelog/changes/010-create-pedido.yaml
+  - include:
+      file: db/changelog/changes/011-create-item-pedido.yaml
+  - include:
+      file: db/changelog/changes/012-create-preparo-item.yaml
+  - include:
+      file: db/changelog/changes/013-create-sessao-caixa.yaml
+  - include:
+      file: db/changelog/changes/014-create-sangria.yaml
+  - include:
+      file: db/changelog/changes/015-create-pagamento.yaml
+  - include:
+      file: db/changelog/changes/016-indices-de-consulta.yaml

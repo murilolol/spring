@@ -1,208 +1,168 @@
-# Documentacao da API
+# Especificação de API REST — Restaurante 2026
 
-Referencia completa dos endpoints, do modelo de dominio e da evidencia de testes do `restaurante2026`, no ponto de quebra da Aula 04.
+Documentação de referência técnica dos endpoints, contratos de transferência (DTOs), paginação, permissões de acesso e padronização de erros da API.
 
-- **Base URL local**: `http://localhost:8080`
-- **Formato**: texto puro no unico endpoint atual; a API ainda nao expoe JSON porque nenhum controller de dominio foi criado (ver [Roadmap de endpoints](#roadmap-de-endpoints))
-- **Autenticacao**: nenhuma (fora do escopo das Aulas 00-04)
+Para detalhes de arquitetura em camadas e modelo relacional, consulte [ARQUITETURA.md](ARQUITETURA.md).
 
-## Sumario
+---
 
-- [Endpoints disponiveis](#endpoints-disponiveis)
-- [Roadmap de endpoints](#roadmap-de-endpoints)
-- [Modelo de dominio (UML)](#modelo-de-dominio-uml)
-- [Fluxo de uma requisicao](#fluxo-de-uma-requisicao)
-- [Resultados de teste](#resultados-de-teste)
-- [Como testar manualmente](#como-testar-manualmente)
+## Índice
 
-## Endpoints disponiveis
+- [Base e protocolo](#base-e-protocolo)
+- [Autenticação e permissões](#autenticação-e-permissões)
+- [Contrato de paginação](#contrato-de-paginação)
+- [Padronização de erros (RFC 7807)](#padronização-de-erros-rfc-7807)
+- [Mapeamento de endpoints](#mapeamento-de-endpoints)
 
-### `GET /api/health`
+---
 
-Verifica se a aplicacao esta no ar. Nao consulta o banco de dados — confirma apenas que o processo Spring Boot esta respondendo requisicoes HTTP.
+## Base e protocolo
 
-| Item | Valor |
-|---|---|
-| Metodo | `GET` |
-| Caminho | `/api/health` |
-| Autenticacao | Nenhuma |
-| Parametros | Nenhum |
-| Corpo da requisicao | Nenhum |
+- **Base URL**: `http://localhost:8080`
+- **Content-Type**: `application/json` (UTF-8)
+- **Formato de Datas**: ISO-8601 (`YYYY-MM-DD` / `YYYY-MM-DDTHH:mm:ssZ`)
+- **Segurança**: HTTP Basic Header (`Authorization: Basic <credentials>`), exceto `/api/health`.
 
-**Resposta de sucesso**
+---
 
-| Status | Content-Type | Corpo |
-|---|---|---|
-| `200 OK` | `text/plain` | `OK` |
+## Autenticação e permissões
 
-**Exemplo — curl**
+A API exige credenciais HTTP Basic enviadas no cabeçalho HTTP de cada requisição.
 
 ```bash
-curl -i http://localhost:8080/api/health
+curl -u admin:admin123 http://localhost:8080/api/auth/me
 ```
 
-```text
-HTTP/1.1 200
-Content-Type: text/plain;charset=UTF-8
+### Matriz de papéis (Roles)
 
-OK
-```
+| Papel | Permissões no Sistema |
+| :--- | :--- |
+| `ROLE_ADMIN` | Acesso irrestrito a cadastros, usuários, relatórios e controle financeiro de caixa. |
+| `ROLE_GARCOM` | Abertura/fechamento de comandas, lançamento de pedidos, reservas de mesa e clientes. |
+| `ROLE_COZINHA` | Leitura e atualização da fila de preparo da cozinha. |
+| `ROLE_CAIXA` | Abertura e fechamento de turnos de caixa, sangrias, suprimentos e quitação de comandas. |
 
-**Exemplo — PowerShell**
+---
 
-```powershell
-Invoke-WebRequest http://localhost:8080/api/health
-```
+## Contrato de paginação
 
-**Implementacao** (`com.curso.restaurante.api.HealthController`):
+Endpoints de listagem aceitam os parâmetros query `page` (0-based) e `size` (padrão 20):
 
-```java
-@RestController
-public class HealthController {
-
-    @GetMapping("/api/health")
-    public String health() {
-        return "OK";
+```json
+{
+  "conteudo": [
+    {
+      "id": 1,
+      "descricao": "Item do Cardápio"
     }
+  ],
+  "pagina": 0,
+  "tamanho": 20,
+  "totalElementos": 42,
+  "totalPaginas": 3,
+  "primeira": true,
+  "ultima": false
 }
 ```
 
-## Roadmap de endpoints
+---
 
-Os endpoints abaixo **ainda nao existem** no codigo. `CategoriaProduto` e `Produto` foram modelados (Aula 03) e persistidos (Aula 04), mas nenhuma aula publicada no repositorio de referencia ate agora cria controllers REST para eles — por isso nao ha `CategoriaProdutoController`/`ProdutoController` neste projeto. A tabela serve como planejamento, nao como contrato implementado:
+## Padronização de erros (RFC 7807)
 
-| Metodo | Caminho planejado | Descricao |
-|---|---|---|
-| `GET` | `/api/categorias` | Listar categorias de produto |
-| `POST` | `/api/categorias` | Cadastrar categoria |
-| `GET` | `/api/produtos` | Listar produtos |
-| `POST` | `/api/produtos` | Cadastrar produto |
-| `PATCH` | `/api/produtos/{id}/estoque` | Registrar entrada/saida de estoque |
+Todas as falhas da API retornam respostas padronizadas no formato `application/problem+json`:
 
-## Modelo de dominio (UML)
+### 1. Erro de Regra de Negócio ou Estado (HTTP 409 / 422)
 
-```mermaid
-classDiagram
-    class Status {
-        <<enumeration>>
-        ATIVO
-        INATIVO
+```json
+{
+  "status": 409,
+  "title": "Conflito de estado",
+  "detail": "Transição de status inválida: o pedido já foi entregue",
+  "instance": "/api/pedidos/12/cancelar"
+}
+```
+
+### 2. Erro de Validação de Campos (HTTP 400 Bad Request)
+
+```json
+{
+  "status": 400,
+  "title": "Requisição inválida",
+  "detail": "Um ou mais campos contêm erros de validação",
+  "campos": [
+    {
+      "campo": "precoVenda",
+      "mensagem": "deve ser maior que zero"
     }
-
-    class CategoriaProduto {
-        -Long id
-        -String nome
-        -Status status
-        -List~Produto~ produtos
-        +CategoriaProduto(nome String)
-        +adicionarProduto(produto Produto) void
-        +ativar() void
-        +inativar() void
-        +getNome() String
-        +getStatus() Status
-        +getProdutos() List~Produto~
-    }
-
-    class Produto {
-        -Long id
-        -String codigo
-        -String descricao
-        -BigDecimal saldoEstoque
-        -BigDecimal valorUnitario
-        -LocalDate dataCadastro
-        -Status status
-        -CategoriaProduto categoria
-        +Produto(codigo String, descricao String, saldoEstoque BigDecimal, valorUnitario BigDecimal, dataCadastro LocalDate)
-        +calcularValorEstoque() BigDecimal
-        +receberEstoque(quantidade BigDecimal) void
-        +retirarEstoque(quantidade BigDecimal) void
-        +alterarDescricao(novaDescricao String) void
-        +alterarValorUnitario(novoValor BigDecimal) void
-        +ativar() void
-        +inativar() void
-        +getCodigo() String
-        +getStatus() Status
-        +getCategoria() CategoriaProduto
-    }
-
-    CategoriaProduto "1" o-- "0..*" Produto : classifica
-    Produto --> Status
-    CategoriaProduto --> Status
+  ]
+}
 ```
 
-Regras de negocio garantidas pelo proprio objeto Java (nao dependem de validacao externa):
+| Código HTTP | Causa |
+| :--- | :--- |
+| **400 Bad Request** | Erro de sintaxe JSON ou falha de Bean Validation (`@Valid`) |
+| **401 Unauthorized** | Credenciais ausentes ou incorretas |
+| **403 Forbidden** | Usuário autenticado com papel insuficiente para a operação |
+| **404 Not Found** | Identificador de recurso inexistente |
+| **409 Conflict** | Conflito de estado ou violação de unicidade no banco |
+| **422 Unprocessable Entity** | Regra de negócio violada durante o processamento |
 
-- `Produto` nao existe em estado invalido: codigo, descricao, saldo e valor unitario sao verificados no construtor.
-- `retirarEstoque` rejeita quantidade maior que o saldo atual (`IllegalArgumentException`).
-- `CategoriaProduto.adicionarProduto` rejeita codigo duplicado dentro da mesma categoria e impede que um produto migre de categoria depois de associado (`IllegalStateException`).
+---
 
-As mesmas regras de unicidade e nao negatividade tambem sao reforcadas no banco (`UNIQUE`, `CHECK`), documentado em [`ARQUITETURA.md`](ARQUITETURA.md#4-persistencia).
+## Mapeamento de endpoints
 
-## Fluxo de uma requisicao
+### 1. Saúde e Autenticação
 
-```mermaid
-sequenceDiagram
-    participant CLI as Cliente (curl/navegador)
-    participant T as Tomcat embutido
-    participant MVC as Spring MVC
-    participant HC as HealthController
+| Método | Caminho | Descrição | Papel Mínimo |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | Status de execução da API | Público |
+| `GET` | `/api/auth/me` | Dados do usuário autenticado | Autenticado |
 
-    CLI->>T: GET /api/health
-    T->>MVC: Encaminha a requisicao
-    MVC->>HC: Chama health()
-    HC-->>MVC: Retorna "OK"
-    MVC-->>T: Monta resposta HTTP
-    T-->>CLI: 200 OK + corpo OK
-```
+### 2. Cardápio
 
-## Resultados de teste
+| Método | Caminho | Descrição | Papel Mínimo |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/cardapio/categorias` | Lista categorias de itens | `GARCOM` / `ADMIN` |
+| `POST` | `/api/cardapio/categorias` | Cadastra nova categoria | `ADMIN` |
+| `GET` | `/api/cardapio/itens` | Lista itens do cardápio paginados | `GARCOM` / `ADMIN` |
+| `POST` | `/api/cardapio/itens` | Cadastra novo item no cardápio | `ADMIN` |
+| `PUT` | `/api/cardapio/itens/{id}` | Atualiza item do cardápio | `ADMIN` |
+| `POST` | `/api/cardapio/itens/{id}/estoque` | Movimenta saldo de estoque | `ADMIN` |
 
-Execucao mais recente de `.\mvnw.cmd test`, com PostgreSQL local ativo e `.env` preenchido:
+### 3. Mesas e Clientes
 
-```text
-Running com.curso.restaurante.domain.CategoriaProdutoTest
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+| Método | Caminho | Descrição | Papel Mínimo |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/mesas` | Consulta ocupação de mesas | `GARCOM` / `ADMIN` |
+| `POST` | `/api/mesas` | Cadastra nova mesa | `ADMIN` |
+| `POST` | `/api/mesas/{id}/reservar` | Reserva uma mesa | `GARCOM` / `ADMIN` |
+| `GET` | `/api/clientes` | Pesquisa clientes cadastrados | `GARCOM` / `CAIXA` |
+| `POST` | `/api/clientes` | Cadastra novo cliente | `GARCOM` / `CAIXA` |
 
-Running com.curso.restaurante.domain.PersistenciaJpaTest
-Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+### 4. Comandas e Pedidos
 
-Running com.curso.restaurante.domain.ProdutoTest
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+| Método | Caminho | Descrição | Papel Mínimo |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/comandas/abrir` | Abre comanda para mesa ou cliente | `GARCOM` |
+| `GET` | `/api/comandas/{id}` | Consulta consumo e conta da comanda | `GARCOM` / `CAIXA` |
+| `POST` | `/api/comandas/{id}/pedidos` | Lança pedido em comanda aberta | `GARCOM` |
+| `POST` | `/api/pedidos/{id}/enviar-para-preparo` | Encaminha itens para a cozinha | `GARCOM` |
+| `POST` | `/api/pedidos/{id}/marcar-entregue` | Confirma entrega do pedido na mesa | `GARCOM` |
+| `POST` | `/api/comandas/{id}/fechar` | Solicita fechamento de conta | `GARCOM` / `CAIXA` |
 
-Running com.curso.restaurante.Restaurante2026ApplicationTests
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+### 5. Cozinha
 
-Tests run: 17, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
-```
+| Método | Caminho | Descrição | Papel Mínimo |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/cozinha/fila` | Lista pedidos pendentes na cozinha | `COZINHA` |
+| `POST` | `/api/cozinha/fila/{id}/iniciar` | Marca início do preparo do prato | `COZINHA` |
+| `POST` | `/api/cozinha/fila/{id}/concluir` | Marca conclusão do preparo do prato | `COZINHA` |
 
-| Classe | O que valida | Precisa de PostgreSQL? |
-|---|---|---|
-| `CategoriaProdutoTest` | Associacao categoria-produto, codigo duplicado, imutabilidade da lista exposta | Nao |
-| `ProdutoTest` | Calculo de valor em estoque, entrada/saida de estoque, validacao de construtor, troca de status | Nao |
-| `Restaurante2026ApplicationTests` | O contexto Spring sobe com o profile `test` | Sim |
-| `PersistenciaJpaTest` | Liquibase aplica os 8 changesets, JPA grava e le `CategoriaProduto`/`Produto`, o banco rejeita codigo duplicado e saldo negativo mesmo via SQL direto | Sim |
+### 6. Caixa e Financeiro
 
-Reproduzir localmente:
-
-```powershell
-.\mvnw.cmd test
-```
-
-## Como testar manualmente
-
-1. Suba a aplicacao com o profile `dev` (ver [`README.md`](../README.md#executando-o-projeto)).
-2. Confirme o health check:
-
-   ```powershell
-   Invoke-WebRequest http://localhost:8080/api/health
-   ```
-
-3. Inspecione o esquema criado pelo Liquibase direto no banco (`categoria_produto`, `produto` ainda vazias, pois nao ha endpoint de cadastro):
-
-   ```sql
-   \c restaurante2026_dev
-   \dt
-   ```
-
-Para exercitar `CategoriaProduto`/`Produto` sem um endpoint REST, use os testes de dominio como referencia executavel de comportamento esperado (`CategoriaProdutoTest`, `ProdutoTest`).
+| Método | Caminho | Descrição | Papel Mínimo |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/caixa/sessoes/abrir` | Abre turno de caixa | `CAIXA` / `ADMIN` |
+| `POST` | `/api/caixa/sangria` | Registra sangria ou suprimento de caixa | `CAIXA` / `ADMIN` |
+| `POST` | `/api/caixa/pagamentos` | Registra pagamento e quita comanda | `CAIXA` |
+| `POST` | `/api/caixa/sessoes/{id}/fechar` | Encerra e confere o turno de caixa | `CAIXA` / `ADMIN` |
