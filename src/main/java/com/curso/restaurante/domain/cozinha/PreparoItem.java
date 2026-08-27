@@ -36,7 +36,7 @@ public class PreparoItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(
             name = "item_pedido_id",
             nullable = false,
@@ -58,7 +58,7 @@ public class PreparoItem {
     @Column(name = "tempo_estimado_minutos", nullable = false)
     private int tempoEstimadoMinutos;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(
             name = "usuario_responsavel_id",
             foreignKey = @ForeignKey(name = "fk_preparo_item_usuario_responsavel"))

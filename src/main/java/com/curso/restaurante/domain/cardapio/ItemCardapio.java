@@ -70,7 +70,7 @@ public class ItemCardapio {
     @Column(nullable = false, length = 20)
     private Status status;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(
             name = "categoria_cardapio_id",
             nullable = false,

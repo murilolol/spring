@@ -49,15 +49,15 @@ public class Comanda {
     @Column(name = "tipo_atendimento", nullable = false, length = 20)
     private TipoAtendimento tipoAtendimento;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "mesa_id", foreignKey = @ForeignKey(name = "fk_comanda_mesa"))
     private Mesa mesa;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cliente_id", foreignKey = @ForeignKey(name = "fk_comanda_cliente"))
     private Cliente cliente;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(
             name = "usuario_responsavel_id",
             nullable = false,

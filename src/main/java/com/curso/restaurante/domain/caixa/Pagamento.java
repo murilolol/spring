@@ -55,7 +55,7 @@ public class Pagamento {
     @Column(precision = 18, scale = 2)
     private BigDecimal troco;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false, foreignKey = @ForeignKey(name = "fk_pagamento_usuario"))
     private Usuario usuario;
 

@@ -47,7 +47,7 @@ public class Pedido {
     @JoinColumn(name = "comanda_id", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_comanda"))
     private Comanda comanda;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(
             name = "usuario_solicitante_id",
             nullable = false,

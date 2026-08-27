@@ -41,7 +41,7 @@ public class Sangria {
     @Column(nullable = false, length = 200)
     private String motivo;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false, foreignKey = @ForeignKey(name = "fk_sangria_usuario"))
     private Usuario usuario;
 

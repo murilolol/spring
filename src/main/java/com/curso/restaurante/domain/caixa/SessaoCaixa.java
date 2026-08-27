@@ -30,14 +30,14 @@ public class SessaoCaixa {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(
             name = "usuario_abertura_id",
             nullable = false,
             foreignKey = @ForeignKey(name = "fk_sessao_caixa_usuario_abertura"))
     private Usuario usuarioAbertura;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(
             name = "usuario_fechamento_id",
             foreignKey = @ForeignKey(name = "fk_sessao_caixa_usuario_fechamento"))
