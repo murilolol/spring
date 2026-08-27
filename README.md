@@ -119,17 +119,23 @@ ADMIN_BOOTSTRAP_PASSWORD=admin123
 
 ### 3. Rodar a aplicação pelo Maven Wrapper
 
+O perfil `dev` precisa ser informado explicitamente — `application.properties`
+não define um perfil padrão de propósito (`spring.profiles.default=none`),
+para forçar a escolha consciente do ambiente (`dev`, `test` ou `prod`).
+
 No Windows (PowerShell):
 ```powershell
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
 No Linux / macOS (Terminal):
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-A API estará pronta em `http://localhost:8080`.
+A API estará pronta em `http://localhost:8080`. Rodar sem a flag de perfil
+falha com `Failed to configure a DataSource` — não é um bug do projeto, é a
+ausência do perfil.
 
 ### 4. Executar os testes automatizados
 
