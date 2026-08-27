@@ -2,6 +2,7 @@ package com.curso.restaurante.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -20,6 +21,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Profile("!schema-reference")
     public SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -33,6 +35,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categorias-cardapio/**", "/api/itens-cardapio/**")
                                 .authenticated()
                         .requestMatchers("/api/categorias-cardapio/**", "/api/itens-cardapio/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/fornecedores/**").authenticated()
+                        .requestMatchers("/api/fornecedores/**").hasRole("ADMIN")
                         .requestMatchers("/api/usuarios/*/senha").authenticated()
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .requestMatchers("/api/clientes/*/ativar", "/api/clientes/*/inativar").hasRole("ADMIN")

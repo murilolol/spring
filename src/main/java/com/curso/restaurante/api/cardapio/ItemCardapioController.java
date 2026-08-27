@@ -1,5 +1,7 @@
 package com.curso.restaurante.api.cardapio;
 
+import com.curso.restaurante.api.cardapio.dto.AlterarEstoqueMinimoRequest;
+import com.curso.restaurante.api.cardapio.dto.AssociarFornecedorRequest;
 import com.curso.restaurante.api.cardapio.dto.AtualizarItemCardapioRequest;
 import com.curso.restaurante.api.cardapio.dto.CriarItemCardapioRequest;
 import com.curso.restaurante.api.cardapio.dto.ItemCardapioResponse;
@@ -39,7 +41,7 @@ public class ItemCardapioController {
                 request.categoriaId(), request.codigo(), request.nome(), request.descricao(),
                 request.precoVenda(), request.tempoPreparoMinutos(), request.secaoPreparo(),
                 request.exigePreparo(), request.controlaEstoque(), request.saldoEstoque(),
-                request.dataCadastro());
+                request.dataCadastro(), request.estoqueMinimo(), request.fornecedorId());
         return ResponseEntity
                 .created(URI.create("/api/itens-cardapio/" + item.getId()))
                 .body(ItemCardapioResponse.de(item));
@@ -76,6 +78,23 @@ public class ItemCardapioController {
     @PostMapping("/{id}/saidas-estoque")
     public ItemCardapioResponse saidaEstoque(@PathVariable Long id, @Valid @RequestBody MovimentoEstoqueRequest request) {
         return ItemCardapioResponse.de(itemCardapioService.registrarSaidaEstoque(id, request.quantidade()));
+    }
+
+    @PostMapping("/{id}/fornecedor")
+    public ItemCardapioResponse associarFornecedor(
+            @PathVariable Long id, @Valid @RequestBody AssociarFornecedorRequest request) {
+        return ItemCardapioResponse.de(itemCardapioService.associarFornecedor(id, request.fornecedorId()));
+    }
+
+    @PostMapping("/{id}/fornecedor/remover")
+    public ItemCardapioResponse removerFornecedor(@PathVariable Long id) {
+        return ItemCardapioResponse.de(itemCardapioService.removerFornecedor(id));
+    }
+
+    @PostMapping("/{id}/estoque-minimo")
+    public ItemCardapioResponse alterarEstoqueMinimo(
+            @PathVariable Long id, @Valid @RequestBody AlterarEstoqueMinimoRequest request) {
+        return ItemCardapioResponse.de(itemCardapioService.alterarEstoqueMinimo(id, request.estoqueMinimo()));
     }
 
     @PostMapping("/{id}/ativar")

@@ -20,8 +20,11 @@ public record ItemCardapioResponse(
         boolean exigePreparo,
         boolean controlaEstoque,
         BigDecimal saldoEstoque,
+        BigDecimal estoqueMinimo,
         LocalDate dataCadastro,
-        Status status) {
+        Status status,
+        Long fornecedorId,
+        String fornecedorRazaoSocial) {
 
     public static ItemCardapioResponse de(ItemCardapio item) {
         return new ItemCardapioResponse(
@@ -37,7 +40,10 @@ public record ItemCardapioResponse(
                 item.isExigePreparo(),
                 item.isControlaEstoque(),
                 item.getSaldoEstoque(),
+                item.getEstoqueMinimo(),
                 item.getDataCadastro(),
-                item.getStatus());
+                item.getStatus(),
+                item.getFornecedor() == null ? null : item.getFornecedor().getId(),
+                item.getFornecedor() == null ? null : item.getFornecedor().getRazaoSocial());
     }
 }

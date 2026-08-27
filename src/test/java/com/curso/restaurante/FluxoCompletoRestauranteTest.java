@@ -211,7 +211,8 @@ class FluxoCompletoRestauranteTest {
                         .content("""
                                 {"categoriaId":%d,"codigo":"%s","nome":"Item %s","descricao":null,
                                 "precoVenda":9.90,"tempoPreparoMinutos":5,"secaoPreparo":"%s","exigePreparo":%s,
-                                "controlaEstoque":false,"saldoEstoque":0,"dataCadastro":"2026-08-20"}
+                                "controlaEstoque":false,"saldoEstoque":0,"dataCadastro":"2026-08-20",
+                                "estoqueMinimo":0}
                                 """.formatted(categoriaId, codigo, codigo, secao, exigePreparo)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();

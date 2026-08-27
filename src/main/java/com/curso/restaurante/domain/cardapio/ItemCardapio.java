@@ -1,6 +1,7 @@
 package com.curso.restaurante.domain.cardapio;
 
 import com.curso.restaurante.domain.Status;
+import com.curso.restaurante.domain.fornecedor.Fornecedor;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -77,6 +78,13 @@ public class ItemCardapio {
             foreignKey = @ForeignKey(name = "fk_item_cardapio_categoria_cardapio"))
     private CategoriaCardapio categoria;
 
+    @Column(name = "estoque_minimo", nullable = false, precision = 18, scale = 3)
+    private BigDecimal estoqueMinimo;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "fornecedor_id", foreignKey = @ForeignKey(name = "fk_item_cardapio_fornecedor"))
+    private Fornecedor fornecedor;
+
     protected ItemCardapio() {
     }
 
@@ -91,6 +99,23 @@ public class ItemCardapio {
             boolean controlaEstoque,
             BigDecimal saldoEstoque,
             LocalDate dataCadastro) {
+        this(
+                codigo, nome, descricao, precoVenda, tempoPreparoMinutos, secaoPreparo, exigePreparo, controlaEstoque,
+                saldoEstoque, dataCadastro, BigDecimal.ZERO);
+    }
+
+    public ItemCardapio(
+            String codigo,
+            String nome,
+            String descricao,
+            BigDecimal precoVenda,
+            int tempoPreparoMinutos,
+            SecaoPreparo secaoPreparo,
+            boolean exigePreparo,
+            boolean controlaEstoque,
+            BigDecimal saldoEstoque,
+            LocalDate dataCadastro,
+            BigDecimal estoqueMinimo) {
         this.codigo = exigirTexto(codigo, "Código é obrigatório");
         this.nome = exigirTexto(nome, "Nome é obrigatório");
         this.descricao = descricao == null ? null : descricao.trim();
@@ -101,6 +126,7 @@ public class ItemCardapio {
         this.controlaEstoque = controlaEstoque;
         this.saldoEstoque = exigirNaoNegativo(saldoEstoque, "Saldo de estoque não pode ser negativo");
         this.dataCadastro = exigirNaoNulo(dataCadastro, "Data de cadastro é obrigatória");
+        this.estoqueMinimo = exigirNaoNegativo(estoqueMinimo, "Estoque mínimo não pode ser negativo");
         this.status = Status.ATIVO;
     }
 
@@ -165,6 +191,18 @@ public class ItemCardapio {
         return exigePreparo;
     }
 
+    public void alterarEstoqueMinimo(BigDecimal novoEstoqueMinimo) {
+        this.estoqueMinimo = exigirNaoNegativo(novoEstoqueMinimo, "Estoque mínimo não pode ser negativo");
+    }
+
+    public void associarFornecedor(Fornecedor fornecedor) {
+        this.fornecedor = exigirNaoNulo(fornecedor, "Fornecedor é obrigatório");
+    }
+
+    public void removerFornecedor() {
+        this.fornecedor = null;
+    }
+
     void associarA(CategoriaCardapio categoria) {
         Objects.requireNonNull(categoria, "Categoria do cardápio é obrigatória");
 
@@ -225,5 +263,13 @@ public class ItemCardapio {
 
     public CategoriaCardapio getCategoria() {
         return categoria;
+    }
+
+    public BigDecimal getEstoqueMinimo() {
+        return estoqueMinimo;
+    }
+
+    public Fornecedor getFornecedor() {
+        return fornecedor;
     }
 }

@@ -17,9 +17,9 @@ Documentação de especificação do tema individual desenvolvido na disciplina 
 | Módulo | Entidades Principais | Responsabilidade no Sistema |
 | :--- | :--- | :--- |
 | **Usuários** | `Usuario` | Autenticação, encriptação BCrypt e controle de acesso por papéis (`ADMIN`, `GARCOM`, `COZINHA`, `CAIXA`). |
-| **Cardápio** | `CategoriaCardapio`, `ItemCardapio` | Cadastro de produtos vendáveis, seções (Cozinha/Bar), preço unitário e controle de estoque. |
+| **Cardápio** | `CategoriaCardapio`, `ItemCardapio`, `Fornecedor` | Cadastro de produtos vendáveis, seções (Cozinha/Bar), preço unitário, controle de estoque com estoque mínimo e fornecedor opcional. |
 | **Clientes** | `Cliente` | Cadastro de clientes e histórico de consumo. |
-| **Mesas** | `Mesa` | Controle do salão com máquina de estados própria (*LIVRE*, *OCUPADA*, *RESERVADA*). |
+| **Mesas** | `Mesa` | Controle do salão com máquina de estados própria (*LIVRE*, *OCUPADA*, *RESERVADA*, *INTERDITADA*). |
 | **Comandas** | `Comanda` | Agrupamento do consumo por mesa ou cliente, controle de conta e saldo devedor. |
 | **Pedidos** | `Pedido`, `ItemPedido` | Gestão de itens solicitados com máquina de estados completa. |
 | **Cozinha** | `PreparoItem` | Fila de preparo priorizada em tempo real para os cozinheiros. |
@@ -38,8 +38,14 @@ A disciplina exige que o modelo de domínio atenda a critérios rígidos de mode
 | **Medida Quantitativa** | `saldoEstoque` (com flag `controlaEstoque`) |
 | **Valor Monetário** | `precoVenda` utilizando `BigDecimal` |
 | **Método com Valor Calculado** | Método `calcularValorEmEstoque()` |
-| **Data Relevante** | `dataCadastro` armazenada como `Instant` / `LocalDateTime` |
-| **Estado do Objeto** | Enum `StatusItemCardapio` (`ATIVO` / `INATIVO`) |
+| **Data Relevante** | `dataCadastro` armazenada como `LocalDate` |
+| **Estado do Objeto** | Enum `Status` (`ATIVO` / `INATIVO`), compartilhado por todas as entidades do projeto |
+
+A rastreabilidade com as Aulas 05, 06 e 07 (repositories/services transacionais,
+evolução de schema assistida por diff, API REST com DTOs/mappers/erros
+padronizados) está em
+[docs/ROTEIRO.md](ROTEIRO.md#aulas-05-06-e-07--transferência-para-o-tema-de-restaurante),
+com o de-para completo entre cada aula e o código deste projeto.
 
 ---
 
@@ -72,4 +78,4 @@ flowchart TD
 O projeto foi construído sob rigorosos critérios de Engenharia de Software:
 - **Design de Entidades Ricas**: Validações e invariantes garantidos dentro dos construtores (sem setters expostos indiscriminadamente).
 - **Precisão Monetária**: Uso exclusivo de `BigDecimal` para moedas e quantidades.
-- **354 Testes Automatizados**: Suíte completa integrando testes unitários, testes de persistência com PostgreSQL real e testes de endpoints HTTP (`MockMvc`).
+- **397 Testes Automatizados**: Suíte completa integrando testes unitários, testes de persistência com PostgreSQL real e testes de endpoints HTTP (`MockMvc`).

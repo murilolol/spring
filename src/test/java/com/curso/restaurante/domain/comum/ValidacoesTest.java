@@ -120,4 +120,35 @@ class ValidacoesTest {
                 new BigDecimal("100"),
                 Validacoes.exigirEntre(new BigDecimal("100"), BigDecimal.ZERO, new BigDecimal("100"), "Percentual inválido"));
     }
+
+    @Test
+    void exigirCnpjDeveRejeitarNulo() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Validacoes.exigirCnpj(null, "CNPJ é obrigatório"));
+    }
+
+    @Test
+    void exigirCnpjDeveRejeitarQuantidadeDeDigitosDiferenteDe14() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Validacoes.exigirCnpj("1234567890123", "CNPJ inválido"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Validacoes.exigirCnpj("123456789012345", "CNPJ inválido"));
+    }
+
+    @Test
+    void exigirCnpjDeveRejeitarCaracteresNaoNumericos() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Validacoes.exigirCnpj("1234567890123a", "CNPJ inválido"));
+    }
+
+    @Test
+    void exigirCnpjDeveAceitar14Digitos() {
+        String resultado = Validacoes.exigirCnpj("12345678901234", "CNPJ inválido");
+
+        assertEquals("12345678901234", resultado);
+    }
 }

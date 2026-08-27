@@ -32,7 +32,7 @@ flowchart LR
         C["curl / Postman / Client Web / Mobile"]
     end
 
-    subgraph Server["Servidor Spring Boot 3.4"]
+    subgraph Server["Servidor Spring Boot 4.0"]
         SEC["Spring Security\n(HTTP Basic)"]
         API["Controllers REST\n+ DTOs"]
         SVC["Services Transacionais\n(@Transactional)"]
@@ -42,7 +42,7 @@ flowchart LR
 
     subgraph DB["Infraestrutura de Banco"]
         PG[(PostgreSQL 16)]
-        LB["Liquibase\n(16 Migrações YAML)"]
+        LB["Liquibase\n(17 Migrações YAML)"]
     end
 
     C -- "HTTP Basic Header" --> SEC
@@ -109,7 +109,7 @@ flowchart TD
 
 ## Modelo relacional e entidades
 
-O banco de dados é composto por 12 tabelas principais gerenciadas pelo Liquibase:
+O banco de dados é composto por 13 tabelas principais gerenciadas pelo Liquibase:
 
 ```mermaid
 erDiagram
@@ -120,6 +120,7 @@ erDiagram
     USUARIO ||--o{ SANGRIA : "registra"
     USUARIO ||--o{ PAGAMENTO : "registra"
     CATEGORIA_CARDAPIO ||--o{ ITEM_CARDAPIO : "classifica"
+    FORNECEDOR |o--o{ ITEM_CARDAPIO : "abastece"
     CLIENTE ||--o{ COMANDA : "possui"
     MESA ||--o{ COMANDA : "hospeda"
     COMANDA ||--o{ PEDIDO : "agrupa"
@@ -130,6 +131,12 @@ erDiagram
     SESSAO_CAIXA ||--o{ SANGRIA : "registra"
     SESSAO_CAIXA ||--o{ PAGAMENTO : "concentra"
 ```
+
+`ITEM_CARDAPIO` também tem um campo `estoque_minimo` (obrigatório, `NUMERIC(18,3)`,
+`>= 0`) e uma associação **opcional** com `FORNECEDOR` — para não quebrar itens
+já cadastrados sem fornecedor definido. Ver
+[docs/ROTEIRO.md](ROTEIRO.md#aulas-05-06-e-07--transferência-para-o-tema-de-restaurante)
+para o raciocínio completo por trás dessa evolução de schema.
 
 ---
 
@@ -214,7 +221,7 @@ stateDiagram-v2
 
 A infraestrutura utiliza o Liquibase para versão e histórico de schema relacional. O Hibernate executa estritamente com `spring.jpa.hibernate.ddl-auto=validate`.
 
-As 16 migrações YAML localizam-se em `src/main/resources/db/changelog/changes/`:
+As 17 migrações YAML localizam-se em `src/main/resources/db/changelog/changes/`:
 
 1. `001-create-categoria-produto.yaml`: Tabela inicial de categorias.
 2. `002-create-produto.yaml`: Tabela inicial de produtos.
@@ -232,6 +239,10 @@ As 16 migrações YAML localizam-se em `src/main/resources/db/changelog/changes/
 14. `014-create-sangria.yaml`: Retiradas de dinheiro (sangria) do caixa durante o turno.
 15. `015-create-pagamento.yaml`: Formas e registros de pagamento.
 16. `016-indices-de-consulta.yaml`: Índices otimizados de banco de dados.
+17. `017-fornecedor-e-estoque-minimo.yaml`: Tabela de fornecedores e evolução de
+    `item_cardapio` (`estoque_minimo`, associação opcional com fornecedor) —
+    escrita a partir de um exercício real de diff assistido pelo Liquibase, ver
+    [docs/ROTEIRO.md](ROTEIRO.md#aulas-05-06-e-07--transferência-para-o-tema-de-restaurante).
 
 > **Por que `001` e `002` ainda existem se o tema não usa mais `categoria_produto`/`produto`?**
 > Essas duas migrações são o esquema original da Aula 04 e já estão no checkpoint imutável
@@ -309,6 +320,7 @@ Content-Type: application/json
 - **`dev`**: Ambiente de desenvolvimento local (`restaurante2026_dev`).
 - **`test`**: Ambiente de testes automatizados (`restaurante2026_test`).
 - **`prod`**: Ambiente de produção com credenciais injetadas por variáveis do ambiente host.
+- **`schema-reference`**: Perfil só de ferramentas — sem servidor web, sem Liquibase, `ddl-auto=create` contra um banco descartável (`restaurante2026_reference`). Usado exclusivamente para gerar um schema de referência a partir das classes JPA atuais, como entrada do exercício de diff do Liquibase (ver [docs/ROTEIRO.md](ROTEIRO.md#aulas-05-06-e-07--transferência-para-o-tema-de-restaurante)). Nunca aponta para `dev`/`test`/`prod`.
 
 ---
 
@@ -317,3 +329,4 @@ Content-Type: application/json
 1. **`BigDecimal` para Valores Monetários**: Prevenção total de inconsistências de arredondamento IEEE 754 de tipos `float`/`double`.
 2. **Fidelidade de Testes no PostgreSQL Real**: Suíte de testes executa contra a mesma engine relacional de produção, garantindo suporte real a tipos, constraints e dialeto SQL.
 3. **Erros Padronizados (RFC 7807)**: Todo erro HTTP utiliza o contrato `application/problem+json`, garantindo clareza e previsibilidade nos clientes.
+4. **Evolução de Schema Assistida por Diff, Nunca Aplicada Cegamente**: Mudanças em tabelas com dados existentes (ex.: `017-fornecedor-e-estoque-minimo.yaml`) usam `liquibase:diff` contra um schema de referência gerado pelo Hibernate só para gerar um rascunho — o rascunho é sempre revisado à mão (nomes de constraint, `CHECK`s ausentes, políticas de `onDelete`, backfill de colunas `NOT NULL`) antes de virar migração real, seguindo expand-migrate-contract quando a coluna precisa ficar obrigatória.

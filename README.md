@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Liquibase-Schema_Migrations-2E8B57?style=flat-square&logo=liquibase&logoColor=white" alt="Liquibase" />
   <img src="https://img.shields.io/badge/Spring_Security-HTTP_Basic-6DB33F?style=flat-square&logo=springsecurity&logoColor=white" alt="Spring Security" />
   <img src="https://img.shields.io/badge/Maven-Wrapper-C71A36?style=flat-square&logo=apachemaven&logoColor=white" alt="Maven Wrapper" />
-  <img src="https://img.shields.io/badge/JUnit_5-354_tests_passed-25A162?style=flat-square&logo=junit5&logoColor=white" alt="JUnit 5" />
+  <img src="https://img.shields.io/badge/JUnit_5-397_tests_passed-25A162?style=flat-square&logo=junit5&logoColor=white" alt="JUnit 5" />
 </p>
 
 <br>
@@ -42,18 +42,18 @@ A aplicação automatiza o fluxo operacional desde a chegada do cliente e ocupa�
 ## Engenharia e padrões de projeto
 
 - **Domain-Driven Design (DDD)**: Entidades ricas que garantem invariantes de negócio e encapsulam regras de cálculo diretamente nos objetos de domínio.
-- **Persistência Auditável**: Migrações de banco gerenciadas incrementalmente pelo Liquibase (16 changesets em YAML), executando no Spring Boot com `ddl-auto=validate`.
+- **Persistência Auditável**: Migrações de banco gerenciadas incrementalmente pelo Liquibase (17 arquivos, 95 changesets em YAML), executando no Spring Boot com `ddl-auto=validate`. Evoluções de schema com dados existentes seguem expand-migrate-contract, validadas com a ferramenta de diff do Liquibase (ver [docs/ROTEIRO.md](docs/ROTEIRO.md)).
 - **Precisão Financeira Estrita**: Emprego exclusivo de `java.math.BigDecimal` para moedas e quantidades, eliminando inconsistências de arredondamento de ponto flutuante.
 - **Máquinas de Estado Finitas**: Ciclo de vida estrito para Pedidos (*ABERTO → EM_PREPARO → PRONTO → ENTREGUE → PAGO*, com cancelamento possível em qualquer etapa até `PRONTO`) e Comandas (*ABERTA → FECHADA → PAGA*, com reabertura de `FECHADA` para `ABERTA` e cancelamento a partir de `ABERTA`).
 - **Contrato de Erros RFC 7807**: Tratamento global de exceções produzindo payloads padronizados no formato `application/problem+json`.
-- **Fidelidade Tecnológica de Testes**: Cobertura integrada com 354 testes executando sobre PostgreSQL 16 real, descartando mocks de banco em memória.
+- **Fidelidade Tecnológica de Testes**: Cobertura integrada com 397 testes executando sobre PostgreSQL 16 real, descartando mocks de banco em memória.
 
 <br>
 
 ## Módulos do sistema
 
 1. **Usuários**: Autenticação, papéis (`ADMIN`, `GARCOM`, `COZINHA`, `CAIXA`) e bootstrap de administrador.
-2. **Cardápio**: Categorização, precificação, seções de preparo (Cozinha/Bar) e controle de estoque.
+2. **Cardápio**: Categorização, precificação, seções de preparo (Cozinha/Bar), controle de estoque com estoque mínimo e fornecedor opcional.
 3. **Clientes**: Cadastro e histórico de consumo.
 4. **Mesas**: Controle de ocupação do salão (*LIVRE*, *OCUPADA*, *RESERVADA*, *INTERDITADA*).
 5. **Comandas**: Vinculação por mesa ou cliente, aglutinação de consumo e fechamento de conta.
@@ -166,10 +166,11 @@ Matriz completa de papéis (`ADMIN`, `GARCOM`, `COZINHA`, `CAIXA`) por endpoint 
 
 ## Documentação complementar
 
-- [docs/ARQUITETURA.md](docs/ARQUITETURA.md) — Diagramas Mermaid de camadas, modelo relacional E-R de 12 tabelas e máquinas de estado.
+- [docs/ARQUITETURA.md](docs/ARQUITETURA.md) — Diagramas Mermaid de camadas, modelo relacional E-R de 13 tabelas e máquinas de estado.
 - [docs/API.md](docs/API.md) — Especificação completa de endpoints, contratos DTO, paginação e respostas HTTP JSON.
 - [docs/tema-do-projeto.md](docs/tema-do-projeto.md) — Detalhamento do domínio de restaurante e rubrica de avaliação.
-- [docs/ROTEIRO.md](docs/ROTEIRO.md) — Política de tags `aula-NN-*` vs `extensao-NN-*`, log de verificações do repositório de referência e divulgação de uso de IA no desenvolvimento.
+- [docs/ROTEIRO.md](docs/ROTEIRO.md) — Política de tags `aula-NN-*` vs `extensao-NN-*`, transferência das Aulas 05-07 para o tema, log de verificações do repositório de referência e divulgação de uso de IA no desenvolvimento.
+- [docs/postman/restaurante2026.postman_collection.json](docs/postman/restaurante2026.postman_collection.json) — Coleção Postman com fluxo feliz e cenários de erro (400/404/409).
 
 <br>
 

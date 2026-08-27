@@ -6,8 +6,10 @@ import com.curso.restaurante.domain.cardapio.ItemCardapio;
 import com.curso.restaurante.domain.cardapio.SecaoPreparo;
 import com.curso.restaurante.domain.comum.ConflitoDeEstadoException;
 import com.curso.restaurante.domain.comum.RecursoNaoEncontradoException;
+import com.curso.restaurante.domain.fornecedor.Fornecedor;
 import com.curso.restaurante.repository.cardapio.CategoriaCardapioRepository;
 import com.curso.restaurante.repository.cardapio.ItemCardapioRepository;
+import com.curso.restaurante.repository.fornecedor.FornecedorRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -23,12 +25,15 @@ public class ItemCardapioService {
 
     private final ItemCardapioRepository itemCardapioRepository;
     private final CategoriaCardapioRepository categoriaCardapioRepository;
+    private final FornecedorRepository fornecedorRepository;
 
     public ItemCardapioService(
             ItemCardapioRepository itemCardapioRepository,
-            CategoriaCardapioRepository categoriaCardapioRepository) {
+            CategoriaCardapioRepository categoriaCardapioRepository,
+            FornecedorRepository fornecedorRepository) {
         this.itemCardapioRepository = itemCardapioRepository;
         this.categoriaCardapioRepository = categoriaCardapioRepository;
+        this.fornecedorRepository = fornecedorRepository;
     }
 
     public ItemCardapio criar(
@@ -43,6 +48,25 @@ public class ItemCardapioService {
             boolean controlaEstoque,
             BigDecimal saldoEstoque,
             LocalDate dataCadastro) {
+        return criar(
+                categoriaId, codigo, nome, descricao, precoVenda, tempoPreparoMinutos, secaoPreparo, exigePreparo,
+                controlaEstoque, saldoEstoque, dataCadastro, BigDecimal.ZERO, null);
+    }
+
+    public ItemCardapio criar(
+            Long categoriaId,
+            String codigo,
+            String nome,
+            String descricao,
+            BigDecimal precoVenda,
+            int tempoPreparoMinutos,
+            SecaoPreparo secaoPreparo,
+            boolean exigePreparo,
+            boolean controlaEstoque,
+            BigDecimal saldoEstoque,
+            LocalDate dataCadastro,
+            BigDecimal estoqueMinimo,
+            Long fornecedorId) {
         if (itemCardapioRepository.existsByCodigo(codigo)) {
             throw new ConflitoDeEstadoException("Já existe um item de cardápio com o código " + codigo);
         }
@@ -52,10 +76,37 @@ public class ItemCardapioService {
 
         ItemCardapio item = new ItemCardapio(
                 codigo, nome, descricao, precoVenda, tempoPreparoMinutos, secaoPreparo, exigePreparo,
-                controlaEstoque, saldoEstoque, dataCadastro);
+                controlaEstoque, saldoEstoque, dataCadastro, estoqueMinimo);
         categoria.adicionarItem(item);
 
+        if (fornecedorId != null) {
+            item.associarFornecedor(buscarFornecedor(fornecedorId));
+        }
+
         return itemCardapioRepository.save(item);
+    }
+
+    public ItemCardapio associarFornecedor(Long id, Long fornecedorId) {
+        ItemCardapio item = buscarPorId(id);
+        item.associarFornecedor(buscarFornecedor(fornecedorId));
+        return item;
+    }
+
+    public ItemCardapio removerFornecedor(Long id) {
+        ItemCardapio item = buscarPorId(id);
+        item.removerFornecedor();
+        return item;
+    }
+
+    public ItemCardapio alterarEstoqueMinimo(Long id, BigDecimal estoqueMinimo) {
+        ItemCardapio item = buscarPorId(id);
+        item.alterarEstoqueMinimo(estoqueMinimo);
+        return item;
+    }
+
+    private Fornecedor buscarFornecedor(Long fornecedorId) {
+        return fornecedorRepository.findById(fornecedorId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Fornecedor não encontrado"));
     }
 
     public ItemCardapio buscarPorId(Long id) {

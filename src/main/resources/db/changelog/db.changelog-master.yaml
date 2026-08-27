@@ -31,3 +31,5 @@ databaseChangeLog:
       file: db/changelog/changes/015-create-pagamento.yaml
   - include:
       file: db/changelog/changes/016-indices-de-consulta.yaml
+  - include:
+      file: db/changelog/changes/017-fornecedor-e-estoque-minimo.yaml

@@ -3,9 +3,11 @@ package com.curso.restaurante.api.cardapio;
 import com.curso.restaurante.domain.cardapio.CategoriaCardapio;
 import com.curso.restaurante.domain.cardapio.ItemCardapio;
 import com.curso.restaurante.domain.cardapio.SecaoPreparo;
+import com.curso.restaurante.domain.fornecedor.Fornecedor;
 import com.curso.restaurante.domain.usuario.PerfilUsuario;
 import com.curso.restaurante.service.cardapio.CategoriaCardapioService;
 import com.curso.restaurante.service.cardapio.ItemCardapioService;
+import com.curso.restaurante.service.fornecedor.FornecedorService;
 import com.curso.restaurante.service.usuario.UsuarioService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,49 @@ class ItemCardapioControllerTest {
     @Autowired
     private UsuarioService usuarioService;
 
+    @Autowired
+    private FornecedorService fornecedorService;
+
+    @Test
+    void adminDeveAssociarERemoverFornecedor() throws Exception {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Fornecedor Item Ctrl", null, 1);
+        ItemCardapio criado = itemCardapioService.criar(
+                categoria.getId(), "ITEM-FORN-CTRL", "Item Fornecedor Ctrl", null, new BigDecimal("9.00"), 5,
+                SecaoPreparo.BAR, true, true, BigDecimal.ZERO, LocalDate.of(2026, 8, 20));
+        Fornecedor fornecedor = fornecedorService.cadastrar("Fornecedor Item Ctrl", "66677788899900");
+
+        mockMvc.perform(post("/api/itens-cardapio/" + criado.getId() + "/fornecedor")
+                        .with(httpBasic("admin", SENHA_ADMIN_BOOTSTRAP))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fornecedorId":%d}
+                                """.formatted(fornecedor.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fornecedorRazaoSocial").value("Fornecedor Item Ctrl"));
+
+        mockMvc.perform(post("/api/itens-cardapio/" + criado.getId() + "/fornecedor/remover")
+                        .with(httpBasic("admin", SENHA_ADMIN_BOOTSTRAP)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fornecedorId").isEmpty());
+    }
+
+    @Test
+    void adminDeveAlterarEstoqueMinimo() throws Exception {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Estoque Minimo Item Ctrl", null, 1);
+        ItemCardapio criado = itemCardapioService.criar(
+                categoria.getId(), "ITEM-ESTOQUE-MINIMO-CTRL", "Item Estoque Mínimo Ctrl", null,
+                new BigDecimal("9.00"), 5, SecaoPreparo.BAR, true, true, BigDecimal.ZERO, LocalDate.of(2026, 8, 20));
+
+        mockMvc.perform(post("/api/itens-cardapio/" + criado.getId() + "/estoque-minimo")
+                        .with(httpBasic("admin", SENHA_ADMIN_BOOTSTRAP))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"estoqueMinimo":3.000}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estoqueMinimo").value(3.0));
+    }
+
     @Test
     void adminDeveCriarItem() throws Exception {
         CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Item Ctrl", null, 1);
@@ -56,7 +101,8 @@ class ItemCardapioControllerTest {
                         .content("""
                                 {"categoriaId":%d,"codigo":"ITEM-CTRL-0001","nome":"Suco Ctrl","descricao":null,
                                 "precoVenda":9.00,"tempoPreparoMinutos":5,"secaoPreparo":"BAR","exigePreparo":true,
-                                "controlaEstoque":true,"saldoEstoque":10.000,"dataCadastro":"2026-08-20"}
+                                "controlaEstoque":true,"saldoEstoque":10.000,"dataCadastro":"2026-08-20",
+                                "estoqueMinimo":2.000}
                                 """.formatted(categoria.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.nome").value("Suco Ctrl"));
@@ -73,7 +119,8 @@ class ItemCardapioControllerTest {
                         .content("""
                                 {"categoriaId":%d,"codigo":"ITEM-CTRL-0002","nome":"Suco Ctrl","descricao":null,
                                 "precoVenda":9.00,"tempoPreparoMinutos":5,"secaoPreparo":"BAR","exigePreparo":true,
-                                "controlaEstoque":true,"saldoEstoque":10.000,"dataCadastro":"2026-08-20"}
+                                "controlaEstoque":true,"saldoEstoque":10.000,"dataCadastro":"2026-08-20",
+                                "estoqueMinimo":2.000}
                                 """.formatted(categoria.getId())))
                 .andExpect(status().isForbidden());
     }

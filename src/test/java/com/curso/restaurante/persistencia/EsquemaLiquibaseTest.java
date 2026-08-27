@@ -37,6 +37,14 @@ class EsquemaLiquibaseTest {
         assertChangeSetAplicado("006-03-foreign-key-categoria-cardapio");
     }
 
+    @Test
+    void deveTerAplicadoOsChangeSetsDoFornecedorEEstoqueMinimo() {
+        assertChangeSetAplicado("017-01-create-fornecedor");
+        assertChangeSetAplicado("017-04-add-estoque-minimo-item-cardapio");
+        assertChangeSetAplicado("017-06-not-null-estoque-minimo-item-cardapio");
+        assertChangeSetAplicado("017-09-foreign-key-item-cardapio-fornecedor");
+    }
+
     private void assertChangeSetAplicado(String id) {
         Integer quantidade = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM databasechangelog WHERE id = ?",

@@ -1,0 +1,170 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-01-create-fornecedor
+      author: extensao-restaurante-2026
+      comment: Cria a tabela de fornecedores de insumos.
+      changes:
+        - createTable:
+            tableName: fornecedor
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_fornecedor
+                    nullable: false
+              - column:
+                  name: razao_social
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cnpj
+                  type: VARCHAR(14)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: fornecedor
+
+  - changeSet:
+      id: 017-02-unique-fornecedor-cnpj
+      author: extensao-restaurante-2026
+      comment: Garante a unicidade global do CNPJ do fornecedor.
+      changes:
+        - addUniqueConstraint:
+            tableName: fornecedor
+            columnNames: cnpj
+            constraintName: uk_fornecedor_cnpj
+      rollback:
+        - dropUniqueConstraint:
+            tableName: fornecedor
+            constraintName: uk_fornecedor_cnpj
+
+  - changeSet:
+      id: 017-03-check-status-fornecedor
+      author: extensao-restaurante-2026
+      comment: Restringe o status aos valores definidos no enum Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE fornecedor
+              ADD CONSTRAINT ck_fornecedor_status
+              CHECK (status IN ('ATIVO', 'INATIVO'))
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE fornecedor
+              DROP CONSTRAINT ck_fornecedor_status
+
+  - changeSet:
+      id: 017-04-add-estoque-minimo-item-cardapio
+      author: extensao-restaurante-2026
+      comment: >
+        Adiciona estoque_minimo como nullable primeiro, para preservar os itens de
+        cardapio ja cadastrados (expand-migrate-contract).
+      changes:
+        - addColumn:
+            tableName: item_cardapio
+            columns:
+              - column:
+                  name: estoque_minimo
+                  type: NUMERIC(18,3)
+      rollback:
+        - dropColumn:
+            tableName: item_cardapio
+            columnName: estoque_minimo
+
+  - changeSet:
+      id: 017-05-fill-estoque-minimo-item-cardapio
+      author: extensao-restaurante-2026
+      comment: Preenche estoque_minimo com zero nos itens de cardapio ja existentes.
+      changes:
+        - update:
+            tableName: item_cardapio
+            columns:
+              - column:
+                  name: estoque_minimo
+                  valueNumeric: 0
+            where: estoque_minimo IS NULL
+      rollback:
+        - update:
+            tableName: item_cardapio
+            columns:
+              - column:
+                  name: estoque_minimo
+                  value: null
+            where: estoque_minimo IS NOT NULL
+
+  - changeSet:
+      id: 017-06-not-null-estoque-minimo-item-cardapio
+      author: extensao-restaurante-2026
+      comment: Torna estoque_minimo obrigatorio depois de preencher as linhas existentes.
+      changes:
+        - addNotNullConstraint:
+            tableName: item_cardapio
+            columnName: estoque_minimo
+            columnDataType: NUMERIC(18,3)
+      rollback:
+        - dropNotNullConstraint:
+            tableName: item_cardapio
+            columnName: estoque_minimo
+            columnDataType: NUMERIC(18,3)
+
+  - changeSet:
+      id: 017-07-check-estoque-minimo-item-cardapio
+      author: extensao-restaurante-2026
+      comment: Impede estoque minimo negativo inclusive fora da aplicacao Java.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              ADD CONSTRAINT ck_item_cardapio_estoque_minimo
+              CHECK (estoque_minimo >= 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE item_cardapio
+              DROP CONSTRAINT ck_item_cardapio_estoque_minimo
+
+  - changeSet:
+      id: 017-08-add-fornecedor-item-cardapio
+      author: extensao-restaurante-2026
+      comment: >
+        Adiciona o vinculo opcional com o fornecedor, para nao quebrar itens de
+        cardapio ja cadastrados sem fornecedor definido.
+      changes:
+        - addColumn:
+            tableName: item_cardapio
+            columns:
+              - column:
+                  name: fornecedor_id
+                  type: BIGINT
+      rollback:
+        - dropColumn:
+            tableName: item_cardapio
+            columnName: fornecedor_id
+
+  - changeSet:
+      id: 017-09-foreign-key-item-cardapio-fornecedor
+      author: extensao-restaurante-2026
+      comment: Liga cada item de cardapio ao seu fornecedor, quando houver.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: item_cardapio
+            baseColumnNames: fornecedor_id
+            referencedTableName: fornecedor
+            referencedColumnNames: id
+            constraintName: fk_item_cardapio_fornecedor
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: item_cardapio
+            constraintName: fk_item_cardapio_fornecedor

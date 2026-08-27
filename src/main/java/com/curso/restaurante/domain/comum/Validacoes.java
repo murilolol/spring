@@ -56,4 +56,11 @@ public final class Validacoes {
         }
         return valor;
     }
+
+    public static String exigirCnpj(String valor, String mensagem) {
+        if (valor == null || !valor.matches("\\d{14}")) {
+            throw new IllegalArgumentException(mensagem);
+        }
+        return valor;
+    }
 }

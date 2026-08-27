@@ -90,6 +90,26 @@ class CardapioPersistenciaTest {
 
     @Test
     @Transactional
+    void bancoDeveImpedirEstoqueMinimoNegativo() {
+        Long categoriaId = inserirCategoriaDiretamente("Categoria Persistencia Estoque Minimo");
+
+        assertThrows(
+                DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update(
+                        """
+                        INSERT INTO item_cardapio (
+                            codigo, nome, preco_venda, tempo_preparo_minutos, secao_preparo,
+                            exige_preparo, controla_estoque, saldo_estoque, estoque_minimo, data_cadastro, status,
+                            categoria_cardapio_id
+                        )
+                        VALUES (?, 'Item Estoque Mínimo Inválido', 10.00, 5, 'COZINHA', true, true, 1.000, -1, DATE '2026-03-10', 'ATIVO', ?)
+                        """,
+                        "CODIGO-ESTOQUE-MINIMO-NEGATIVO-PERSIST",
+                        categoriaId));
+    }
+
+    @Test
+    @Transactional
     void bancoDeveImpedirSecaoDePreparoInvalida() {
         Long categoriaId = inserirCategoriaDiretamente("Categoria Persistencia Secao");
 
@@ -99,9 +119,10 @@ class CardapioPersistenciaTest {
                         """
                         INSERT INTO item_cardapio (
                             codigo, nome, preco_venda, tempo_preparo_minutos, secao_preparo,
-                            exige_preparo, controla_estoque, saldo_estoque, data_cadastro, status, categoria_cardapio_id
+                            exige_preparo, controla_estoque, saldo_estoque, estoque_minimo, data_cadastro, status,
+                            categoria_cardapio_id
                         )
-                        VALUES (?, 'Item Seção Inválida', 10.00, 5, 'PADARIA', true, true, 1.000, DATE '2026-03-10', 'ATIVO', ?)
+                        VALUES (?, 'Item Seção Inválida', 10.00, 5, 'PADARIA', true, true, 1.000, 0, DATE '2026-03-10', 'ATIVO', ?)
                         """,
                         "CODIGO-SECAO-INVALIDA-PERSIST",
                         categoriaId));
@@ -128,9 +149,10 @@ class CardapioPersistenciaTest {
                 """
                 INSERT INTO item_cardapio (
                     codigo, nome, preco_venda, tempo_preparo_minutos, secao_preparo,
-                    exige_preparo, controla_estoque, saldo_estoque, data_cadastro, status, categoria_cardapio_id
+                    exige_preparo, controla_estoque, saldo_estoque, estoque_minimo, data_cadastro, status,
+                    categoria_cardapio_id
                 )
-                VALUES (?, ?, CAST(? AS NUMERIC), 5, 'COZINHA', true, true, CAST(? AS NUMERIC), DATE '2026-03-10', 'ATIVO', ?)
+                VALUES (?, ?, CAST(? AS NUMERIC), 5, 'COZINHA', true, true, CAST(? AS NUMERIC), 0, DATE '2026-03-10', 'ATIVO', ?)
                 """,
                 codigo,
                 nome,

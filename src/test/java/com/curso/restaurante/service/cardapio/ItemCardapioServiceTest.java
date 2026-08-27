@@ -6,6 +6,8 @@ import com.curso.restaurante.domain.cardapio.ItemCardapio;
 import com.curso.restaurante.domain.cardapio.SecaoPreparo;
 import com.curso.restaurante.domain.comum.ConflitoDeEstadoException;
 import com.curso.restaurante.domain.comum.RecursoNaoEncontradoException;
+import com.curso.restaurante.domain.fornecedor.Fornecedor;
+import com.curso.restaurante.service.fornecedor.FornecedorService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,6 +32,76 @@ class ItemCardapioServiceTest {
 
     @Autowired
     private CategoriaCardapioService categoriaCardapioService;
+
+    @Autowired
+    private FornecedorService fornecedorService;
+
+    @Test
+    void deveCriarItemComEstoqueMinimoEFornecedor() {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Item Fornecedor Svc", null, 1);
+        Fornecedor fornecedor = fornecedorService.cadastrar("Fornecedor Item Svc", "55566677788899");
+
+        ItemCardapio item = itemCardapioService.criar(
+                categoria.getId(), "ITEM-FORN-SVC-0001", "Suco Svc", null, new BigDecimal("9.00"), 5,
+                SecaoPreparo.BAR, true, true, new BigDecimal("10.000"), LocalDate.of(2026, 8, 20),
+                new BigDecimal("2.000"), fornecedor.getId());
+
+        assertEquals(0, new BigDecimal("2.000").compareTo(item.getEstoqueMinimo()));
+        assertEquals(fornecedor.getId(), item.getFornecedor().getId());
+    }
+
+    @Test
+    void deveCriarItemSemFornecedorUsandoOMetodoAntigo() {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Item Sem Fornecedor Svc", null, 1);
+
+        ItemCardapio item = itemCardapioService.criar(
+                categoria.getId(), "ITEM-SEM-FORN-SVC", "Suco Svc", null, new BigDecimal("9.00"), 5,
+                SecaoPreparo.BAR, true, true, new BigDecimal("10.000"), LocalDate.of(2026, 8, 20));
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getEstoqueMinimo()));
+    }
+
+    @Test
+    void deveRejeitarFornecedorInexistenteENaoDevePersistirNada() {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Item Fornecedor Inexistente Svc", null, 1);
+
+        assertThrows(
+                RecursoNaoEncontradoException.class,
+                () -> itemCardapioService.criar(
+                        categoria.getId(), "ITEM-FORN-INEXISTENTE-SVC", "Suco Svc", null, new BigDecimal("9.00"), 5,
+                        SecaoPreparo.BAR, true, true, new BigDecimal("10.000"), LocalDate.of(2026, 8, 20),
+                        BigDecimal.ZERO, -1L));
+
+        var pagina = itemCardapioService.listar(categoria.getId(), null, null, null, PageRequest.of(0, 50));
+        assertTrue(pagina.getContent().isEmpty());
+    }
+
+    @Test
+    void deveAssociarERemoverFornecedor() {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Associar Fornecedor Svc", null, 1);
+        Fornecedor fornecedor = fornecedorService.cadastrar("Fornecedor Associar Svc", "66677788899900");
+        ItemCardapio criado = itemCardapioService.criar(
+                categoria.getId(), "ITEM-ASSOCIAR-FORN-SVC", "Suco Svc", null, new BigDecimal("9.00"), 5,
+                SecaoPreparo.BAR, true, true, BigDecimal.ZERO, LocalDate.of(2026, 8, 20));
+
+        ItemCardapio associado = itemCardapioService.associarFornecedor(criado.getId(), fornecedor.getId());
+        assertEquals(fornecedor.getId(), associado.getFornecedor().getId());
+
+        ItemCardapio removido = itemCardapioService.removerFornecedor(criado.getId());
+        assertEquals(null, removido.getFornecedor());
+    }
+
+    @Test
+    void deveAlterarEstoqueMinimo() {
+        CategoriaCardapio categoria = categoriaCardapioService.criar("Categoria Alterar Estoque Minimo Svc", null, 1);
+        ItemCardapio criado = itemCardapioService.criar(
+                categoria.getId(), "ITEM-ALTERAR-ESTOQUE-MINIMO-SVC", "Suco Svc", null, new BigDecimal("9.00"), 5,
+                SecaoPreparo.BAR, true, true, BigDecimal.ZERO, LocalDate.of(2026, 8, 20));
+
+        ItemCardapio alterado = itemCardapioService.alterarEstoqueMinimo(criado.getId(), new BigDecimal("3.000"));
+
+        assertEquals(0, new BigDecimal("3.000").compareTo(alterado.getEstoqueMinimo()));
+    }
 
     @Test
     void deveCriarItem() {

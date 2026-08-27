@@ -1,6 +1,7 @@
 package com.curso.restaurante.domain.cardapio;
 
 import com.curso.restaurante.domain.Status;
+import com.curso.restaurante.domain.fornecedor.Fornecedor;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -172,6 +173,93 @@ class ItemCardapioTest {
 
         assertTrue(exigePreparo.exigeEntradaNaFilaDeCozinha());
         assertFalse(naoExigePreparo.exigeEntradaNaFilaDeCozinha());
+    }
+
+    @Test
+    void construtorAntigoDeveDefinirEstoqueMinimoComoZero() {
+        ItemCardapio item = novoItem("30.000", "9.00", true);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getEstoqueMinimo()));
+    }
+
+    @Test
+    void construtorAntigoNaoDeveAssociarFornecedor() {
+        ItemCardapio item = novoItem("30.000", "9.00", true);
+
+        assertEquals(null, item.getFornecedor());
+    }
+
+    @Test
+    void naoDeveCriarItemComEstoqueMinimoNegativo() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ItemCardapio(
+                        "BEB-0001",
+                        "Suco Natural",
+                        "Suco de laranja natural",
+                        new BigDecimal("9.00"),
+                        5,
+                        SecaoPreparo.BAR,
+                        true,
+                        true,
+                        new BigDecimal("30.000"),
+                        LocalDate.of(2026, 8, 20),
+                        new BigDecimal("-1")));
+    }
+
+    @Test
+    void deveCriarItemComEstoqueMinimoInformado() {
+        ItemCardapio item = new ItemCardapio(
+                "BEB-0001",
+                "Suco Natural",
+                "Suco de laranja natural",
+                new BigDecimal("9.00"),
+                5,
+                SecaoPreparo.BAR,
+                true,
+                true,
+                new BigDecimal("30.000"),
+                LocalDate.of(2026, 8, 20),
+                new BigDecimal("5.000"));
+
+        assertEquals(0, new BigDecimal("5.000").compareTo(item.getEstoqueMinimo()));
+    }
+
+    @Test
+    void deveAssociarERemoverFornecedor() {
+        ItemCardapio item = novoItem("30.000", "9.00", true);
+        Fornecedor fornecedor = new Fornecedor("Distribuidora Bom Sabor Ltda", "12345678901234");
+
+        item.associarFornecedor(fornecedor);
+        assertEquals(fornecedor, item.getFornecedor());
+
+        item.removerFornecedor();
+        assertEquals(null, item.getFornecedor());
+    }
+
+    @Test
+    void naoDeveAssociarFornecedorNulo() {
+        ItemCardapio item = novoItem("30.000", "9.00", true);
+
+        assertThrows(NullPointerException.class, () -> item.associarFornecedor(null));
+    }
+
+    @Test
+    void deveAlterarEstoqueMinimo() {
+        ItemCardapio item = novoItem("30.000", "9.00", true);
+
+        item.alterarEstoqueMinimo(new BigDecimal("2.000"));
+
+        assertEquals(0, new BigDecimal("2.000").compareTo(item.getEstoqueMinimo()));
+    }
+
+    @Test
+    void naoDeveAlterarEstoqueMinimoParaNegativo() {
+        ItemCardapio item = novoItem("30.000", "9.00", true);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> item.alterarEstoqueMinimo(new BigDecimal("-1")));
     }
 
     private ItemCardapio novoItem(String saldo, String precoVenda, boolean controlaEstoque) {

@@ -3,6 +3,8 @@
 Documentação de referência técnica dos endpoints, contratos de transferência (DTOs), paginação, permissões de acesso e padronização de erros da API.
 
 Para detalhes de arquitetura em camadas e modelo relacional, consulte [ARQUITETURA.md](ARQUITETURA.md).
+Uma coleção Postman pronta para explorar a API (fluxo feliz + cenários de erro
+400/404/409) está em [docs/postman/restaurante2026.postman_collection.json](postman/restaurante2026.postman_collection.json).
 
 ---
 
@@ -134,7 +136,7 @@ segurança; "Autenticado" significa que qualquer usuário logado, de qualquer pa
 | `POST` | `/api/usuarios/{id}/ativar` | Reativa um usuário | `ADMIN` |
 | `POST` | `/api/usuarios/{id}/inativar` | Inativa um usuário | `ADMIN` |
 
-### 3. Cardápio
+### 3. Cardápio e Fornecedores
 
 | Método | Caminho | Descrição | Papel Mínimo |
 | :--- | :--- | :--- | :--- |
@@ -150,8 +152,16 @@ segurança; "Autenticado" significa que qualquer usuário logado, de qualquer pa
 | `PUT` | `/api/itens-cardapio/{id}` | Atualiza um item | `ADMIN` |
 | `POST` | `/api/itens-cardapio/{id}/entradas-estoque` | Registra entrada de estoque | `ADMIN` |
 | `POST` | `/api/itens-cardapio/{id}/saidas-estoque` | Registra saída de estoque | `ADMIN` |
+| `POST` | `/api/itens-cardapio/{id}/fornecedor` | Associa um fornecedor ao item | `ADMIN` |
+| `POST` | `/api/itens-cardapio/{id}/fornecedor/remover` | Remove o fornecedor do item | `ADMIN` |
+| `POST` | `/api/itens-cardapio/{id}/estoque-minimo` | Altera o estoque mínimo do item | `ADMIN` |
 | `POST` | `/api/itens-cardapio/{id}/ativar` | Reativa um item | `ADMIN` |
 | `POST` | `/api/itens-cardapio/{id}/inativar` | Inativa um item | `ADMIN` |
+| `POST` | `/api/fornecedores` | Cadastra fornecedor de insumos | `ADMIN` |
+| `GET` | `/api/fornecedores` | Lista fornecedores paginados | Autenticado |
+| `GET` | `/api/fornecedores/{id}` | Consulta um fornecedor | Autenticado |
+| `POST` | `/api/fornecedores/{id}/ativar` | Reativa um fornecedor | `ADMIN` |
+| `POST` | `/api/fornecedores/{id}/inativar` | Inativa um fornecedor | `ADMIN` |
 
 ### 4. Clientes
 

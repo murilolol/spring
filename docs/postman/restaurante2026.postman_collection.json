@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "Restaurante 2026 - Aula 07",
+    "description": "Fluxo de cardapio (categoria -> fornecedor -> item) com os cenarios de erro exigidos pela Aula 07: 400 (validacao), 404 (nao encontrado), 409 (duplicidade) e 400 (JSON malformado).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "admin", "type": "string" },
+      { "key": "password", "value": "admin123", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "categoriaId", "value": "" },
+    { "key": "fornecedorId", "value": "" },
+    { "key": "itemId", "value": "" },
+    { "key": "codigoItem", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 Health check",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": { "raw": "{{baseUrl}}/api/health", "host": ["{{baseUrl}}"], "path": ["api", "health"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Cadastrar categoria",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nome\": \"Bebidas Postman\",\n  \"descricao\": \"Bebidas em geral\",\n  \"ordemExibicao\": 1\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/categorias-cardapio", "host": ["{{baseUrl}}"], "path": ["api", "categorias-cardapio"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "pm.test('tem Location', function () { pm.response.to.have.header('Location'); });",
+              "var corpo = pm.response.json();",
+              "pm.collectionVariables.set('categoriaId', corpo.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Cadastrar fornecedor",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"razaoSocial\": \"Distribuidora Postman Ltda\",\n  \"cnpj\": \"11122233344455\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/fornecedores", "host": ["{{baseUrl}}"], "path": ["api", "fornecedores"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "pm.test('tem Location', function () { pm.response.to.have.header('Location'); });",
+              "var corpo = pm.response.json();",
+              "pm.collectionVariables.set('fornecedorId', corpo.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Cadastrar item de cardapio",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"categoriaId\": {{categoriaId}},\n  \"codigo\": \"POSTMAN-0001\",\n  \"nome\": \"Suco Postman\",\n  \"descricao\": \"Suco de laranja natural\",\n  \"precoVenda\": 9.00,\n  \"tempoPreparoMinutos\": 5,\n  \"secaoPreparo\": \"BAR\",\n  \"exigePreparo\": true,\n  \"controlaEstoque\": true,\n  \"saldoEstoque\": 10.000,\n  \"dataCadastro\": \"2026-08-27\",\n  \"estoqueMinimo\": 2.000,\n  \"fornecedorId\": {{fornecedorId}}\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/itens-cardapio", "host": ["{{baseUrl}}"], "path": ["api", "itens-cardapio"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "pm.test('tem Location', function () { pm.response.to.have.header('Location'); });",
+              "var corpo = pm.response.json();",
+              "pm.collectionVariables.set('itemId', corpo.id);",
+              "pm.collectionVariables.set('codigoItem', corpo.codigo);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Buscar item por id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/itens-cardapio/{{itemId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "itens-cardapio", "{{itemId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('nome correto', function () { pm.expect(pm.response.json().nome).to.eql('Suco Postman'); });",
+              "pm.test('fornecedor associado', function () { pm.expect(pm.response.json().fornecedorRazaoSocial).to.eql('Distribuidora Postman Ltda'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Listar itens",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/itens-cardapio", "host": ["{{baseUrl}}"], "path": ["api", "itens-cardapio"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('tem paginacao', function () { pm.expect(pm.response.json()).to.have.property('conteudo'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Erro 400 - item invalido",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": { "raw": "{{baseUrl}}/api/itens-cardapio", "host": ["{{baseUrl}}"], "path": ["api", "itens-cardapio"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('lista campos invalidos', function () { pm.expect(pm.response.json()).to.have.property('campos'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Erro 404 - item inexistente",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/itens-cardapio/999999999",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "itens-cardapio", "999999999"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Erro 409 - codigo duplicado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"categoriaId\": {{categoriaId}},\n  \"codigo\": \"{{codigoItem}}\",\n  \"nome\": \"Suco Duplicado Postman\",\n  \"descricao\": null,\n  \"precoVenda\": 9.00,\n  \"tempoPreparoMinutos\": 5,\n  \"secaoPreparo\": \"BAR\",\n  \"exigePreparo\": true,\n  \"controlaEstoque\": true,\n  \"saldoEstoque\": 0,\n  \"dataCadastro\": \"2026-08-27\",\n  \"estoqueMinimo\": 0\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/itens-cardapio", "host": ["{{baseUrl}}"], "path": ["api", "itens-cardapio"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 409', function () { pm.response.to.have.status(409); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Erro 400 - JSON malformado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"codigo\": \"QUEBRADO\", " },
+        "url": { "raw": "{{baseUrl}}/api/itens-cardapio", "host": ["{{baseUrl}}"], "path": ["api", "itens-cardapio"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
