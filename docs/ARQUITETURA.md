@@ -141,28 +141,71 @@ A integridade do fluxo de atendimento é garantida por transições orientadas a
 
 ```mermaid
 stateDiagram-v2
-    [*] --> RECEBIDO: Lançamento na comanda
-    RECEBIDO --> EM_PREPARO: Início do preparo na cozinha
+    [*] --> ABERTO: Lançamento na comanda
+    ABERTO --> EM_PREPARO: Início do preparo na cozinha
     EM_PREPARO --> PRONTO: Conclusão do prato
     PRONTO --> ENTREGUE: Entrega na mesa pelo garçom
-    
-    RECEBIDO --> CANCELADO: Cancelamento com motivo
+    ENTREGUE --> PAGO: Comanda quitada no caixa (cascata)
+
+    ABERTO --> CANCELADO: Cancelamento com motivo
     EM_PREPARO --> CANCELADO: Cancelamento excepcional
-    
-    ENTREGUE --> [*]
+    PRONTO --> CANCELADO: Cancelamento excepcional
+
+    PAGO --> [*]
     CANCELADO --> [*]
 ```
+
+`PAGO` não tem endpoint próprio — é atingido apenas por cascata quando o pagamento da
+Comanda quita o total (`Comanda.marcarComoPaga()` chama `Pedido.marcarComoPago()` em cada
+pedido `ENTREGUE`). Um pedido `ENTREGUE` não pode mais ser cancelado.
 
 ### 2. Ciclo de vida da comanda (`StatusComanda`)
 
 ```mermaid
 stateDiagram-v2
     [*] --> ABERTA: Comanda vinculada à mesa/cliente
-    ABERTA --> CONTA_SOLICITADA: Solicitação do fechamento de conta
-    CONTA_SOLICITADA --> PAGA: Recebimento do pagamento no caixa
-    PAGA --> FECHADA: Liberação da mesa e encerramento
-    
-    FECHADA --> [*]
+    ABERTA --> FECHADA: Solicitação do fechamento de conta
+    FECHADA --> ABERTA: Reabertura (correção antes do pagamento)
+    FECHADA --> PAGA: Pagamento quita o saldo devedor no caixa
+    ABERTA --> CANCELADA: Cancelamento sem consumo cobrável
+
+    PAGA --> [*]
+    CANCELADA --> [*]
+```
+
+### 3. Ciclo de vida da mesa (`StatusMesa`)
+
+`ocupar()`/`liberar()` não têm endpoint próprio — são efeito colateral de abrir/fechar
+comanda, para que a mesa nunca divirja da realidade do salão.
+
+```mermaid
+stateDiagram-v2
+    [*] --> LIVRE
+    LIVRE --> RESERVADA: reservar
+    RESERVADA --> LIVRE: cancelar a reserva
+    LIVRE --> OCUPADA: ocupar (abertura de comanda)
+    RESERVADA --> OCUPADA: ocupar (abertura de comanda)
+    OCUPADA --> LIVRE: liberar (fechamento de comanda)
+    LIVRE --> INTERDITADA: interditar
+    RESERVADA --> INTERDITADA: interditar
+    INTERDITADA --> LIVRE: liberar a interdição
+```
+
+### 4. Ciclo de vida do item na fila de preparo (`StatusPreparo`)
+
+Uma entrada por item de pedido que exige preparo (`ItemCardapio.exigePreparo=true`), não
+por pedido — permite roteamento independente por seção (cozinha/bar).
+
+```mermaid
+stateDiagram-v2
+    [*] --> AGUARDANDO: Item enviado para preparo
+    AGUARDANDO --> EM_PREPARO: Cozinheiro inicia
+    EM_PREPARO --> CONCLUIDO: Cozinheiro conclui
+    AGUARDANDO --> CANCELADO
+    EM_PREPARO --> CANCELADO
+
+    CONCLUIDO --> [*]
+    CANCELADO --> [*]
 ```
 
 ---
@@ -186,9 +229,18 @@ As 16 migrações YAML localizam-se em `src/main/resources/db/changelog/changes/
 11. `011-create-item-pedido.yaml`: Itens lançados no pedido.
 12. `012-create-preparo-item.yaml`: Fila de preparo da cozinha.
 13. `013-create-sessao-caixa.yaml`: Sessões e turnos de caixa.
-14. `014-create-sangria.yaml`: Movimentações financeiras de sangria/suprimento.
+14. `014-create-sangria.yaml`: Retiradas de dinheiro (sangria) do caixa durante o turno.
 15. `015-create-pagamento.yaml`: Formas e registros de pagamento.
 16. `016-indices-de-consulta.yaml`: Índices otimizados de banco de dados.
+
+> **Por que `001` e `002` ainda existem se o tema não usa mais `categoria_produto`/`produto`?**
+> Essas duas migrações são o esquema original da Aula 04 e já estão no checkpoint imutável
+> `aula-04-jpa-postgresql-liquibase`. Liquibase trata cada changeset como um registro histórico
+> append-only — editá-los ou removê-los quebraria o checksum de qualquer banco que já os tenha
+> executado. A migração `004-drop-cardapio-legado.yaml` documenta explicitamente essa transição,
+> derrubando as duas tabelas do tema antigo antes de `005`/`006` criarem `categoria_cardapio`/
+> `item_cardapio` no novo desenho. Este é o mesmo padrão usado em evolução de schema real
+> (nunca reescrever uma migração já aplicada — sempre migrar para a frente).
 
 ---
 
@@ -233,7 +285,7 @@ Content-Type: application/json
 {
   "id": 12,
   "comandaId": 1,
-  "status": "RECEBIDO",
+  "status": "ABERTO",
   "observacao": "Sem pimenta",
   "valorTotal": 58.00,
   "dataHoraCriacao": "2026-08-26T13:40:00Z",
