@@ -23,7 +23,7 @@ Documentação de especificação do tema individual desenvolvido na disciplina 
 | **Comandas** | `Comanda` | Agrupamento do consumo por mesa ou cliente, controle de conta e saldo devedor. |
 | **Pedidos** | `Pedido`, `ItemPedido` | Gestão de itens solicitados com máquina de estados completa. |
 | **Cozinha** | `PreparoItem` | Fila de preparo priorizada em tempo real para os cozinheiros. |
-| **Caixa** | `SessaoCaixa`, `Sangria`, `Pagamento` | Turnos de caixa, suprimentos, sangrias e liquidação de contas. |
+| **Caixa** | `SessaoCaixa`, `Sangria`, `Pagamento` | Turnos de caixa, sangrias e liquidação de contas. |
 
 ---
 
