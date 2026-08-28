@@ -86,7 +86,7 @@ public class Comanda {
     @Column(length = 300)
     private String observacao;
 
-    @OneToMany(mappedBy = "comanda", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "comanda", fetch = FetchType.EAGER)
     private List<Pedido> pedidos = new ArrayList<>();
 
     protected Comanda() {

@@ -3,8 +3,10 @@
 Documentação de referência técnica dos endpoints, contratos de transferência (DTOs), paginação, permissões de acesso e padronização de erros da API.
 
 Para detalhes de arquitetura em camadas e modelo relacional, consulte [ARQUITETURA.md](ARQUITETURA.md).
-Uma coleção Postman pronta para explorar a API (fluxo feliz + cenários de erro
-400/404/409) está em [docs/postman/restaurante2026.postman_collection.json](postman/restaurante2026.postman_collection.json).
+Uma coleção Postman com todos os endpoints (fluxo de atendimento completo, CRUD
+de cada módulo e cenários de erro 400/401/403/404/409) está em
+[docs/postman/restaurante2026.postman_collection.json](postman/restaurante2026.postman_collection.json)
+— reexecutável do início ao fim, validada com `npx newman run`.
 
 ---
 

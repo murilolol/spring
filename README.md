@@ -170,7 +170,7 @@ Matriz completa de papéis (`ADMIN`, `GARCOM`, `COZINHA`, `CAIXA`) por endpoint 
 - [docs/API.md](docs/API.md) — Especificação completa de endpoints, contratos DTO, paginação e respostas HTTP JSON.
 - [docs/tema-do-projeto.md](docs/tema-do-projeto.md) — Detalhamento do domínio de restaurante e rubrica de avaliação.
 - [docs/ROTEIRO.md](docs/ROTEIRO.md) — Política de tags `aula-NN-*` vs `extensao-NN-*`, transferência das Aulas 05-07 para o tema, log de verificações do repositório de referência e divulgação de uso de IA no desenvolvimento.
-- [docs/postman/restaurante2026.postman_collection.json](docs/postman/restaurante2026.postman_collection.json) — Coleção Postman com fluxo feliz e cenários de erro (400/404/409).
+- [docs/postman/restaurante2026.postman_collection.json](docs/postman/restaurante2026.postman_collection.json) — Coleção Postman com todos os endpoints (fluxo completo, CRUD por módulo e cenários de erro), reexecutável e validada com Newman.
 
 <br>
 

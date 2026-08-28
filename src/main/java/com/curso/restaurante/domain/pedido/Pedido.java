@@ -82,7 +82,7 @@ public class Pedido {
     @Column(name = "cancelado_em")
     private LocalDateTime canceladoEm;
 
-    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<ItemPedido> itens = new ArrayList<>();
 
     protected Pedido() {

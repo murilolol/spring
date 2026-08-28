@@ -108,7 +108,7 @@ genuinamente novo:
 | `Fornecedor` (nova entidade, Aula 06) | `domain/fornecedor/Fornecedor` | **Novo neste incremento** — fornecedor de insumos do item de cardápio (`razaoSocial`, `cnpj`, `status`). |
 | `estoqueMinimo` em `Produto` (Aula 06) | `estoqueMinimo` em `ItemCardapio` | **Novo neste incremento.** |
 | Evolução assistida por diff do Liquibase (Aula 06) | Migração `017-fornecedor-e-estoque-minimo.yaml` | **Novo neste incremento** — exercício de diff feito de verdade (ver abaixo). |
-| Coleção Postman com cenários de erro (Aula 07 §10) | `docs/postman/restaurante2026.postman_collection.json` | **Novo neste incremento.** |
+| Coleção Postman com cenários de erro (Aula 07 §10) | `docs/postman/restaurante2026.postman_collection.json` | **Novo neste incremento** — cobre todos os módulos (não só cardápio/fornecedor), organizada em um fluxo de atendimento completo + pastas de CRUD por módulo + cenários de erro. Validada de verdade com `npx newman run`, reexecutável (todo valor único é gerado dinamicamente). |
 
 ### Exercício de evolução de schema com ferramenta de diff (Aula 06)
 
@@ -153,6 +153,27 @@ mesmo padrão dos arquivos existentes), rodar o diff de novo contra um banco já
 migrado mostrou só os mesmos ruídos de FK/índice conhecidos (itens 1 e 2, agora
 incluindo a FK nova, esperada) — nenhuma diferença genuína, confirmando que
 schema e entidades convergem.
+
+### Segundo bug real encontrado testando a coleção Postman (Aula 07)
+
+A coleção Postman (`docs/postman/restaurante2026.postman_collection.json`) foi
+executada de verdade com o Newman (`npx newman run ...`) contra a aplicação
+rodando, não só desenhada — e isso revelou outro caso da mesma classe de bug
+corrigida na `Extensao 12` (associação lazy lida fora da transação), desta vez
+em coleções `@OneToMany`: `Pedido.itens` e `Comanda.pedidos` continuavam
+`FetchType.LAZY`, mas `PedidoResponse`/`ContaResponse` dependem delas para
+montar a resposta. Qualquer endpoint que buscasse um `Pedido`/`Comanda` já
+persistido (não recém-criado em memória) e devolvesse essas respostas —
+`enviar-para-preparo`, `marcar-entregue`, `GET /api/pedidos`,
+`GET /api/comandas/{id}/conta` — quebrava com `LazyInitializationException`.
+Os testes JUnit não pegaram isso pelo mesmo motivo de sempre: a transação
+única de cada `@Transactional` de teste mascara a ausência de uma transação
+real no caminho controller → DTO. Corrigido trocando as duas coleções para
+`FetchType.EAGER` (coleções pequenas — poucos itens por pedido, poucos
+pedidos por comanda — mesmo raciocínio de escala já usado nas associações
+`@ManyToOne` da `Extensao 12`). 397/397 testes continuam passando depois da
+mudança, e a coleção Postman inteira (119 requisições, 150 asserções) passa
+limpa, inclusive executada duas vezes seguidas sem reiniciar o banco.
 
 ### Divergência de nomenclatura nas Aulas 03/04
 
